@@ -32,7 +32,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg tracking-wide">Helium Music</h1>
-                    <p class="text-xs text-slate-400">Roland FP-30X • Connexion Bluetooth & MIDI</p>
+                    <p class="text-xs text-slate-400">Roland FP-30X • Bluetooth Direct</p>
                 </div>
             </div>
             <button id="btn-refresh" class="text-slate-400 hover:text-white p-2 rounded-lg bg-slate-800 transition">
@@ -49,33 +49,31 @@
         <!-- Bouton de Connexion Bluetooth Principal -->
         <button id="btn-connect" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-lg shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition flex items-center justify-center space-x-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <span id="connect-text">Connecter le Piano</span>
+            <span id="connect-text">Associer le Piano Bluetooth</span>
         </button>
 
         <!-- Statut de Connexion -->
         <div id="status-card" class="bg-cardbg border border-slate-800 rounded-2xl p-4 flex items-start space-x-3 transition">
             <div id="status-dot" class="w-3 h-3 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
             <div>
-                <h2 id="status-title" class="font-medium text-sm text-slate-200">En attente de connexion</h2>
-                <p id="status-desc" class="text-xs text-slate-400 mt-0.5">Allumez votre Roland FP-30X et cliquez sur le bouton ci-dessus.</p>
+                <h2 id="status-title" class="font-medium text-sm text-slate-200">En attente d'association</h2>
+                <p id="status-desc" class="text-xs text-slate-400 mt-0.5">Allumez votre Roland FP-30X et activez le Bluetooth de votre téléphone.</p>
             </div>
         </div>
 
         <!-- Moniteur MIDI en direct -->
         <div class="grid grid-cols-1 gap-4">
-            <!-- Dernière note jouée -->
             <div class="bg-cardbg border border-slate-800 rounded-2xl p-4">
                 <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Dernière note</span>
                 <div class="flex items-baseline space-x-2 mt-2">
                     <span id="note-name" class="text-3xl font-bold text-cyan-400">-</span>
-                    <span id="note-freq" class="text-xs text-slate-500">Fréquence / MIDI ID</span>
+                    <span id="note-freq" class="text-xs text-slate-500">MIDI ID</span>
                 </div>
                 <p id="note-sub" class="text-xs text-slate-400 mt-2">Aucune note jouée</p>
             </div>
 
-            <!-- Vélocité -->
             <div class="bg-cardbg border border-slate-800 rounded-2xl p-4">
                 <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Vélocité (Intensité)</span>
                 <div class="flex items-baseline space-x-2 mt-2">
@@ -84,12 +82,10 @@
                 <p class="text-xs text-slate-400 mt-2">Force d'appui (0 - 127)</p>
             </div>
 
-            <!-- Pédale de Sustain -->
             <div class="bg-cardbg border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                     <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Pédale de Sustain</span>
                     <div id="sustain-val" class="text-2xl font-bold text-slate-200 mt-1">OFF</div>
-                    <p class="text-xs text-slate-400 mt-1">État de la pédale forte</p>
                 </div>
                 <div id="sustain-indicator" class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center transition">
                     <div class="w-4 h-4 rounded-full bg-slate-600 transition"></div>
@@ -99,7 +95,6 @@
 
     </main>
 
-    <!-- Script Web MIDI -->
     <script>
         const btnConnect = document.getElementById('btn-connect');
         const connectText = document.getElementById('connect-text');
@@ -117,81 +112,74 @@
         const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         function midiNumberToName(midiNote) {
             const octave = Math.floor(midiNote / 12) - 1;
-            const name = noteNames[midiNote % 12];
-            return `${name}${octave}`;
+            return `${noteNames[midiNote % 12]}${octave}`;
         }
 
-        async function connectMIDI() {
-            if (!navigator.requestMIDIAccess) {
-                alert("Le Web MIDI n'est pas supporté par ce navigateur. Utilisez Google Chrome.");
+        async function connectBluetooth() {
+            if (!navigator.bluetooth) {
+                alert("Le Web Bluetooth n'est pas supporté par votre navigateur. Utilisez Google Chrome sur Android ou PC.");
                 return;
             }
 
-            connectText.textContent = "Recherche du piano...";
-            statusDot.className = "w-3 h-3 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-ping";
-            statusTitle.textContent = "Ouverture du sélecteur Bluetooth...";
-            statusDesc.textContent = "Sélectionnez votre Roland FP-30X dans la liste du navigateur.";
-
             try {
-                const midiAccess = await navigator.requestMIDIAccess({ sysex: true });
-                
-                let deviceFound = false;
-                let inputs = midiAccess.inputs.values();
-                
-                for (let input of inputs) {
-                    deviceFound = true;
-                    setupInput(input);
-                }
+                connectText.textContent = "Recherche Bluetooth...";
+                statusDot.className = "w-3 h-3 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-ping";
+                statusTitle.textContent = "Sélectionnez votre piano...";
+                statusDesc.textContent = "Choisissez 'FP-30X' ou 'Roland' dans la liste de Chrome.";
 
-                if (deviceFound) {
-                    onConnected("Piano connecté avec succès !");
-                } else {
-                    statusTitle.textContent = "Aucun appareil MIDI actif";
-                    statusDesc.textContent = "Vérifiez que le Bluetooth de votre appareil est actif et réessayez.";
+                // Demande l'appareil Bluetooth MIDI standard (Service BLE MIDI: 03b80e5a-ede8-4b33-a751-6ce34ec4c700)
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['03b80e5a-ede8-4b33-a751-6ce34ec4c700'] }],
+                    optionalServices: ['03b80e5a-ede8-4b33-a751-6ce34ec4c700']
+                });
+
+                statusTitle.textContent = "Connexion au serveur GATT...";
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('03b80e5a-ede8-4b33-a751-6ce34ec4c700');
+                const characteristic = await service.getCharacteristic('7772e5db-3868-4112-a1a9-f2669d106bf3');
+
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleBluetoothMIDI);
+
+                statusDot.className = "w-3 h-3 rounded-full bg-emerald-500 mt-1.5 shrink-0";
+                statusTitle.textContent = "Piano connecté en Bluetooth !";
+                statusDesc.textContent = device.name || "Roland FP-30X";
+                connectText.textContent = "Connecté 🎹";
+                btnConnect.classList.remove('from-cyan-500', 'to-indigo-600');
+                btnConnect.classList.add('from-emerald-600', 'to-teal-600');
+
+                device.addEventListener('gattserverdisconnected', () => {
                     statusDot.className = "w-3 h-3 rounded-full bg-red-500 mt-1.5 shrink-0";
-                    connectText.textContent = "Réessayer la connexion";
-                }
-
-                midiAccess.onstatechange = (e) => {
-                    if (e.port.type === "input" && e.port.state === "connected") {
-                        setupInput(e.port);
-                        onConnected(`Connecté : ${e.port.name}`);
-                    }
-                };
+                    statusTitle.textContent = "Piano déconnecté";
+                    statusDesc.textContent = "Re-cliquez pour relier.";
+                    connectText.textContent = "Reconnecter";
+                });
 
             } catch (error) {
                 console.error(error);
                 statusDot.className = "w-3 h-3 rounded-full bg-red-500 mt-1.5 shrink-0";
-                statusTitle.textContent = "Accès refusé ou indisponible";
-                statusDesc.textContent = "Autorisez l'accès aux appareils à proximité dans Chrome.";
+                statusTitle.textContent = "Erreur de connexion";
+                statusDesc.textContent = "Vérifiez que le Bluetooth est activé et réessayez.";
                 connectText.textContent = "Réessayer";
             }
         }
 
-        function setupInput(input) {
-            input.onmidimessage = handleMIDIMessage;
-        }
-
-        function onConnected(msg) {
-            statusDot.className = "w-3 h-3 rounded-full bg-emerald-500 mt-1.5 shrink-0";
-            statusTitle.textContent = "Piano connecté";
-            statusDesc.textContent = msg;
-            connectText.textContent = "Piano Prêt 🎹";
-            btnConnect.classList.remove('from-cyan-500', 'to-indigo-600');
-            btnConnect.classList.add('from-emerald-600', 'to-teal-600');
-        }
-
-        function handleMIDIMessage(event) {
-            const [status, note, velocity] = event.data;
+        function handleBluetoothMIDI(event) {
+            const value = event.target.value;
+            // Le protocole BLE MIDI envoie un timestamp puis les données MIDI
+            if (value.byteLength < 3) return;
+            
+            const status = value.getUint8(2);
+            const note = value.getUint8(3);
+            const velocity = value.byteLength > 4 ? value.getUint8(4) : 0;
+            
             const command = status >> 4;
 
             if (command === 9 && velocity > 0) {
-                const name = midiNumberToName(note);
-                noteNameEl.textContent = name;
-                noteSubEl.textContent = `Note MIDI : ${note}`;
+                noteNameEl.textContent = midiNumberToName(note);
+                noteSubEl.textContent = `MIDI ID : ${note}`;
                 velocityValEl.textContent = velocity;
-            } 
-            else if (command === 11 && note === 64) {
+            } else if (command === 11 && note === 64) {
                 if (velocity >= 64) {
                     sustainValEl.textContent = "ON";
                     sustainIndicator.className = "w-4 h-4 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50 scale-125 transition";
@@ -202,7 +190,7 @@
             }
         }
 
-        btnConnect.addEventListener('click', connectMIDI);
+        btnConnect.addEventListener('click', connectBluetooth);
         btnRefresh.addEventListener('click', () => window.location.reload());
     </script>
 </body>
