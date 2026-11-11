@@ -66,7 +66,7 @@
             <!-- Carte Bibliothèque / Mes Morceaux -->
             <button id="nav-to-library" class="bg-cardbg border border-slate-800 hover:border-orange-500/50 rounded-3xl p-6 shadow-lg flex items-center justify-between text-left transition group">
                 <div>
-                    <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">Bibliothèque</span>
+                    <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Bibliothèque</span>
                     <h2 class="font-bold text-lg text-slate-100 mt-1">Mes Enregistrements</h2>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-orange-500 group-hover:scale-105 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -228,13 +228,12 @@
         const recBtnText = document.getElementById('rec-btn-text');
         const recBtnDot = document.getElementById('rec-btn-dot');
 
-        // Bouton unique Enregistrer / Arrêter
+        // Bouton unique Enregistrer / Arrêter (Démarrage immédiat au clic)
         btnToggleRec.addEventListener('click', () => {
             if (!isRecording) {
-                // Démarrage avec un léger décalage de sécurité pour éviter de couper l'attaque de la première note
                 isRecording = true;
                 recordedEvents = [];
-                recordingStartTime = Date.now() + 400; // Marge de sécurité de 400ms au début
+                recordingStartTime = Date.now(); // Top départ exact au clic sur le bouton
                 
                 btnToggleRec.className = "bg-slate-800 hover:bg-slate-700 text-white py-4 px-8 rounded-2xl shadow-md transition flex items-center space-x-3";
                 recBtnDot.className = "w-4 h-4 rounded-full bg-red-500 animate-ping";
@@ -244,6 +243,7 @@
                 recStateText.textContent = "Enregistrement en cours...";
                 
                 let seconds = 0;
+                timerDisplay.textContent = "00:00";
                 clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
                     seconds++;
@@ -252,7 +252,6 @@
                     timerDisplay.textContent = `${m}:${s}`;
                 }, 1000);
             } else {
-                // Arrêt -> Demande de sauvegarde
                 isRecording = false;
                 clearInterval(timerInterval);
                 
@@ -274,7 +273,6 @@
             }
         });
 
-        // Gestion de la modale de sauvegarde
         document.getElementById('btn-cancel-save').addEventListener('click', () => {
             modalSave.classList.remove('flex');
             modalSave.classList.add('hidden');
@@ -307,7 +305,6 @@
             renderLibrary();
         });
 
-        // Affichage de la bibliothèque
         function renderLibrary() {
             const libraryList = document.getElementById('library-list');
             libraryList.innerHTML = '';
@@ -338,7 +335,6 @@
             });
         }
 
-        // Lecture d'un morceau de la bibliothèque avec gestion fluide des accords et de la saturation
         window.playTrack = function(id) {
             const track = savedTracks.find(t => t.id === id);
             if (!track || !instrument) return;
@@ -349,7 +345,6 @@
 
             track.events.forEach(event => {
                 setTimeout(() => {
-                    // Sécurité anti-saturation sur les grosses charges de notes simultanées
                     if (event.type === 9 && event.data2 > 0) {
                         if (activeAudioNodes[event.data1]) {
                             try { activeAudioNodes[event.data1].stop(); } catch(e) {}
@@ -383,7 +378,7 @@
                             sustainedNotesToStop.clear();
                         }
                     }
-                }, Math.max(0, event.timestamp)); // Empêche les timestamps négatifs au démarrage
+                }, event.timestamp);
             });
         };
 
@@ -395,8 +390,7 @@
 
         function handleMidiMessage(type, data1, data2) {
             if (isRecording) {
-                let timestamp = Date.now() - recordingStartTime;
-                if (timestamp < 0) timestamp = 0; // Force le premier temps à 0 proprement
+                const timestamp = Date.now() - recordingStartTime;
                 recordedEvents.push({ timestamp, type, data1, data2 });
             }
         }
