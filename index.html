@@ -92,7 +92,7 @@
             
             <div class="text-center">
                 <span id="recorded-notes-count" class="text-4xl font-extrabold text-white">0</span>
-                <p class="text-xs text-slate-500 uppercase tracking-wider mt-1">Notes enregistrées</p>
+                <p class="text-xs text-slate-500 uppercase tracking-wider mt-1">Événements enregistrés</p>
             </div>
         </div>
 
@@ -157,7 +157,6 @@
             }
 
             if (!instrument) {
-                // Chargement d'un instrument de piano acoustique haute qualité intégré
                 Soundfont.instrument(audioCtx, 'acoustic_grand_piano').then(function (player) {
                     instrument = player;
                     recStateText.textContent = "Prêt à enregistrer";
@@ -218,29 +217,68 @@
             recStateText.textContent = "Enregistrement terminé";
         });
 
-        function handleMidiMessage(note, velocity, command) {
+        // Gestion de l'enregistrement des notes et de la pédale (CC 64)
+        function handleMidiMessage(type, data1, data2) {
             if (isRecording) {
                 const timestamp = Date.now() - recordingStartTime;
-                recordedEvents.push({ timestamp, note, velocity, command });
+                recordedEvents.push({ timestamp, type, data1, data2 });
                 recordedNotesCount.textContent = recordedEvents.length;
             }
         }
 
+        // Lecture de la performance avec gestion du sustain de la pédale
         btnPlayRec.addEventListener('click', () => {
             if (recordedEvents.length === 0 || !instrument) return;
             
-            recStateText.textContent = "Lecture de votre performance...";
+            recStateText.textContent = "Lecture avec sustain...";
             btnPlayRec.disabled = true;
+
+            let activeAudioNodes = {};
+            let sustainActive = false;
+            let sustainedNotesToStop = new Set();
 
             recordedEvents.forEach(event => {
                 setTimeout(() => {
-                    if (event.command === 9 && event.velocity > 0) {
-                        instrument.play(event.note);
+                    // Type 9 = Note ON, Type 8 = Note OFF, Type 11 = Contrôleur (Pédale)
+                    if (event.type === 9 && event.data2 > 0) {
+                        // Si une note jouait déjà, on la coupe proprement
+                        if (activeAudioNodes[event.data1]) {
+                            try { activeAudioNodes[event.data1].stop(); } catch(e) {}
+                        }
+                        // On joue la note et on stocke l'objet audio
+                        activeAudioNodes[event.data1] = instrument.play(event.data1);
+                    } 
+                    else if (event.type === 8 || (event.type === 9 && event.data2 === 0)) {
+                        const note = event.data1;
+                        if (activeAudioNodes[note]) {
+                            if (sustainActive) {
+                                // Si la pédale est enfoncée, on retient la note pour la couper plus tard
+                                sustainedNotesToStop.add(note);
+                            } else {
+                                // Sinon on coupe tout de suite
+                                try { activeAudioNodes[note].stop(); } catch(e) {}
+                                delete activeAudioNodes[note];
+                            }
+                        }
+                    } 
+                    else if (event.type === 11 && event.data1 === 64) {
+                        // Contrôleur de pédale de sustain (CC 64)
+                        sustainActive = event.data2 >= 64;
+                        if (!sustainActive) {
+                            // Quand on relève la pédale, on stoppe toutes les notes qui étaient en attente
+                            sustainedNotesToStop.forEach(note => {
+                                if (activeAudioNodes[note]) {
+                                    try { activeAudioNodes[note].stop(); } catch(e) {}
+                                    delete activeAudioNodes[note];
+                                }
+                            });
+                            sustainedNotesToStop.clear();
+                        }
                     }
                 }, event.timestamp);
             });
 
-            const totalDuration = recordedEvents[recordedEvents.length - 1].timestamp + 1500;
+            const totalDuration = recordedEvents[recordedEvents.length - 1].timestamp + 2000;
             setTimeout(() => {
                 recStateText.textContent = "Lecture terminée";
                 btnPlayRec.disabled = false;
@@ -262,14 +300,15 @@
                     const value = e.target.value;
                     if (value.byteLength < 3) return;
                     const status = value.getUint8(2);
-                    const note = value.getUint8(3);
-                    const velocity = value.byteLength > 4 ? value.getUint8(4) : 0;
+                    const data1 = value.getUint8(3);
+                    const data2 = value.byteLength > 4 ? value.getUint8(4) : 0;
                     const command = status >> 4;
 
-                    if (command === 9 && velocity > 0) {
-                        handleMidiMessage(note, velocity, 9);
-                    } else if (command === 8 || (command === 9 && velocity === 0)) {
-                        handleMidiMessage(note, velocity, 8);
+                    // Command 9 = Note On, Command 8 = Note Off, Command 11 = Control Change (Pédale)
+                    if (command === 9 || command === 8) {
+                        handleMidiMessage(command, data1, data2);
+                    } else if (command === 11) {
+                        handleMidiMessage(11, data1, data2);
                     }
                 });
 
