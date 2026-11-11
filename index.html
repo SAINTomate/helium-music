@@ -66,7 +66,7 @@
             <!-- Carte Bibliothèque / Mes Morceaux -->
             <button id="nav-to-library" class="bg-cardbg border border-slate-800 hover:border-orange-500/50 rounded-3xl p-6 shadow-lg flex items-center justify-between text-left transition group">
                 <div>
-                    <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">Bibliothèque</span>
+                    <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Bibliothèque</span>
                     <h2 class="font-bold text-lg text-slate-100 mt-1">Mes Enregistrements</h2>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-orange-500 group-hover:scale-105 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -139,9 +139,7 @@
             <!-- Contrôles du lecteur (Play/Pause dynamique) -->
             <div class="flex justify-center pt-2">
                 <button id="btn-modal-play-pause" class="bg-orange-600 hover:bg-orange-500 text-white p-4 rounded-2xl shadow-md transition flex items-center justify-center">
-                    <!-- Icône Play -->
                     <svg id="modal-icon-play" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
-                    <!-- Icône Pause (cachée par défaut) -->
                     <svg id="modal-icon-pause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current hidden" viewBox="0 0 20 20"><path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/></svg>
                 </button>
             </div>
@@ -368,7 +366,7 @@
             });
         }
 
-        // Logique de lecture fluide avec l'horloge AudioContext et gestion de la barre de temps
+        // Logique de lecture corrigée (gestion stricte du volume minimum et de la pédale)
         let activeTimeouts = [];
         let activeAudioNodes = {};
         let isPlayerRunning = false;
@@ -391,7 +389,6 @@
         };
 
         function startTrackPlayback(track) {
-            // Nettoyage si lecture précédente en cours
             activeTimeouts.forEach(t => clearTimeout(t));
             activeTimeouts = [];
             Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
@@ -408,9 +405,7 @@
             let sustainActive = false;
             let sustainedNotesToStop = new Set();
 
-            // Planification ultra-précise
             track.events.forEach(event => {
-                const delay = event.timestamp / 1000; // en secondes
                 const timeoutId = setTimeout(() => {
                     if (!isPlayerRunning) return;
 
@@ -419,7 +414,9 @@
                             try { activeAudioNodes[event.data1].stop(); } catch(e) {}
                         }
                         try {
-                            activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: event.data2 / 127 });
+                            // Sécurité volume : vélocité ramenée entre 0.3 et 1.0 pour qu'aucune note ne soit inaudible
+                            const normalizedGain = Math.max(0.3, event.data2 / 127);
+                            activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: normalizedGain });
                         } catch(err) {}
                     } 
                     else if (event.type === 8 || (event.type === 9 && event.data2 === 0)) {
@@ -449,7 +446,6 @@
                 activeTimeouts.push(timeoutId);
             });
 
-            // Mise à jour de la barre de progression visuelle
             const progressInterval = setInterval(() => {
                 if (!isPlayerRunning) {
                     clearInterval(progressInterval);
@@ -478,7 +474,6 @@
             return `${m}:${s}`;
         }
 
-        // Bouton Pause/Play dans la modale
         document.getElementById('btn-modal-play-pause').addEventListener('click', () => {
             isPlayerRunning = !isPlayerRunning;
             const modalIconPlay = document.getElementById('modal-icon-play');
