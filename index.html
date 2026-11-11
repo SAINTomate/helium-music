@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Helium Music - Roland FP-30X Companion</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inclusion de la bibliothèque soundfont-player pour lire les fichiers .sf2 -->
+    <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -13,13 +15,14 @@
                     colors: {
                         darkbg: '#090d16',
                         cardbg: '#131c31',
-                        accent: '#38bdf8'
+                        accent: '#ff6600'
                     }
                 }
             }
         }
     </script>
     <style>
+        /* Clavier compact multi-octaves en bas de l'écran vertical */
         .piano-keyboard-vertical {
             display: flex;
             position: relative;
@@ -46,8 +49,8 @@
             z-index: 1;
         }
         .key.white.active {
-            background: #38bdf8 !important;
-            box-shadow: 0 0 6px #38bdf8;
+            background: #ff6600 !important;
+            box-shadow: 0 0 6px #ff6600;
         }
         .key.black {
             width: 9px;
@@ -60,223 +63,24 @@
             border-radius: 0 0 2px 2px;
         }
         .key.black.active {
-            background: #0284c7 !important;
-            box-shadow: 0 0 5px #0284c7;
+            background: #ea580c !important;
+            box-shadow: 0 0 5px #ea580c;
         }
     </style>
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen flex flex-col font-sans antialiased select-none">
 
-    <!-- PAGE ACCUEIL -->
-    <div id="view-home" class="flex-1 flex flex-col p-4 max-w-md w-full mx-auto justify-between space-y-4">
+    <!-- PAGE ACCUEIL (Dashboard style Roland App) -->
+    <div id="view-home" class="flex-1 flex flex-col p-4 max-w-md w-full mx-auto justify-between space-y-3">
         <header class="flex items-center justify-between py-2">
-            <div>
-                <h1 class="font-bold text-xl tracking-tight text-white">Helium Music</h1>
-                <p class="text-xs text-slate-400">Roland FP-30X Companion</p>
-            </div>
+            <h1 class="font-bold text-xl tracking-tight text-white">Dashboard</h1>
             <div id="home-status" class="w-3 h-3 rounded-full bg-amber-500"></div>
         </header>
 
-        <!-- Un seul grand carré : Clavier -->
-        <div class="flex-1 flex flex-col justify-center">
-            <button id="nav-to-keyboard" class="bg-cardbg border border-slate-800 hover:border-sky-500/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between aspect-square text-left transition group">
-                <div class="bg-sky-600/20 text-sky-400 p-4 rounded-xl w-fit border border-sky-500/30 group-hover:scale-105 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
-                </div>
+        <!-- Cartes du Dashboard -->
+        <div class="flex-1 flex flex-col space-y-3 justify-center">
+            <!-- Carte Library -->
+            <div class="bg-cardbg border border-slate-800 rounded-2xl p-4 shadow-md flex items-center justify-between">
                 <div>
-                    <h2 class="font-bold text-lg text-slate-200">Clavier &amp; Visualiseur</h2>
-                    <p class="text-xs text-slate-400 mt-1">Affichage des notes en direct</p>
-                </div>
-            </button>
-        </div>
-
-        <!-- Bouton Connexion Bluetooth -->
-        <button id="btn-connect-home" class="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/20 transition flex items-center justify-center space-x-2">
-            <span>Connecter le Piano Bluetooth</span>
-        </button>
-    </div>
-
-    <!-- PAGE CLAVIER / VISUALISEUR (Flux de notes traversant tout l'écran) -->
-    <div id="view-keyboard-page" class="flex-1 hidden flex-col p-3 max-w-md w-full mx-auto justify-between space-y-2">
-        <div class="flex items-center justify-between py-2 px-1">
-            <button id="nav-to-home" class="text-slate-400 hover:text-white flex items-center space-x-1 text-sm font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                <span>Accueil</span>
-            </button>
-            <div id="chord-display" class="text-xs font-bold text-cyan-400 bg-slate-900 px-3 py-1 rounded-xl border border-slate-800">
-                -
-            </div>
-            <div id="visu-status" class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-        </div>
-
-        <!-- Zone de flux des notes montantes (monte jusqu'en haut) -->
-        <div class="flex-1 bg-cardbg border border-slate-800 rounded-2xl p-2 relative overflow-hidden flex flex-col justify-end shadow-inner min-h-[360px]">
-            <div id="notes-stream" class="w-full h-full flex items-end justify-center relative">
-                <span class="text-xs text-slate-600 italic self-center">Jouez sur votre piano...</span>
-            </div>
-        </div>
-
-        <!-- Clavier Virtuel Complet en bas -->
-        <div class="bg-cardbg border border-slate-800 rounded-xl p-2 shadow-lg">
-            <div id="keyboard-container" class="piano-keyboard-vertical"></div>
-        </div>
-    </div>
-
-    <script>
-        const viewHome = document.getElementById('view-home');
-        const viewKeyboardPage = document.getElementById('view-keyboard-page');
-        
-        document.getElementById('nav-to-keyboard').addEventListener('click', () => {
-            viewHome.classList.add('hidden');
-            viewKeyboardPage.classList.remove('hidden');
-        });
-        document.getElementById('nav-to-home').addEventListener('click', () => {
-            viewKeyboardPage.classList.add('hidden');
-            viewHome.classList.remove('hidden');
-        });
-
-        // Synthétiseur audio tactile (uniquement au clic sur l'écran)
-        let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-
-        function playCleanPianoTone(midiNote) {
-            initAudio();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
-            const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
-            const now = audioCtx.currentTime;
-
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            osc.type = 'triangle'; // Son plus doux
-            osc.frequency.setValueAtTime(freq, now);
-
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
-
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            osc.start(now);
-            osc.stop(now + 1.5);
-        }
-
-        // Génération du Clavier Complet (C2=36 à C7=96)
-        const keyboardContainer = document.getElementById('keyboard-container');
-        const noteNamesGlobal = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-        const keyElements = {};
-        let activeNotes = new Set();
-
-        function buildKeyboard() {
-            for (let midi = 36; midi <= 96; midi++) {
-                const name = noteNamesGlobal[midi % 12];
-                const isBlack = name.includes('#');
-                const key = document.createElement('div');
-                key.className = `key ${isBlack ? 'black' : 'white'}`;
-                key.dataset.midi = midi;
-
-                key.addEventListener('mousedown', () => {
-                    playCleanPianoTone(midi);
-                    activateKey(midi);
-                });
-                key.addEventListener('mouseup', () => deactivateKey(midi));
-                key.addEventListener('mouseleave', () => deactivateKey(midi));
-
-                keyboardContainer.appendChild(key);
-                keyElements[midi] = key;
-            }
-        }
-        buildKeyboard();
-
-        function activateKey(midi) {
-            activeNotes.add(midi);
-            if (keyElements[midi]) keyElements[midi].classList.add('active');
-            updateChordDisplay();
-            spawnFallingNote(midi);
-        }
-
-        function deactivateKey(midi) {
-            activeNotes.delete(midi);
-            if (keyElements[midi]) keyElements[midi].classList.remove('active');
-            updateChordDisplay();
-        }
-
-        function updateChordDisplay() {
-            const chordEl = document.getElementById('chord-display');
-            if (activeNotes.size === 0) {
-                chordEl.textContent = "-";
-                return;
-            }
-            const notesArray = Array.from(activeNotes).map(n => noteNamesGlobal[n % 12]);
-            chordEl.textContent = notesArray.join(' - ');
-        }
-
-        // Animation des traits montants traversant tout l'écran
-        const notesStream = document.getElementById('notes-stream');
-        function spawnFallingNote(midi) {
-            if (notesStream.querySelector('italic')) {
-                notesStream.innerHTML = '';
-            }
-            const bar = document.createElement('div');
-            bar.className = 'absolute bottom-0 w-2 bg-gradient-to-t from-sky-500 to-indigo-500 rounded-t-full transition-all duration-1000 opacity-90';
-            
-            const percent = ((midi - 36) / (96 - 36)) * 95;
-            bar.style.left = percent + '%';
-            bar.style.height = '6px';
-            
-            notesStream.appendChild(bar);
-
-            // Monte jusqu'à 100% de la hauteur du conteneur
-            setTimeout(() => {
-                bar.style.height = '100vh';
-                bar.style.opacity = '0';
-            }, 20);
-
-            setTimeout(() => {
-                bar.remove();
-            }, 1000);
-        }
-
-        // Connexion Bluetooth MIDI (Détecte et affiche les notes en direct sans double son)
-        async function connectBluetoothPiano() {
-            try {
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: ['03b80e5a-ede8-4b33-a751-6ce34ec4c700'] }],
-                    optionalServices: ['03b80e5a-ede8-4b33-a751-6ce34ec4c700']
-                });
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService('03b80e5a-ede8-4b33-a751-6ce34ec4c700');
-                const characteristic = await service.getCharacteristic('7772e5db-3868-4112-a1a9-f2669d106bf3');
-
-                await characteristic.startNotifications();
-                characteristic.addEventListener('characteristicvaluechanged', (e) => {
-                    const value = e.target.value;
-                    if (value.byteLength < 3) return;
-                    const status = value.getUint8(2);
-                    const note = value.getUint8(3);
-                    const velocity = value.byteLength > 4 ? value.getUint8(4) : 0;
-                    const command = status >> 4;
-
-                    if (command === 9 && velocity > 0) {
-                        activateKey(note);
-                    } else if (command === 8 || (command === 9 && velocity === 0)) {
-                        deactivateKey(note);
-                    }
-                });
-
-                document.getElementById('home-status').className = "w-3 h-3 rounded-full bg-emerald-500";
-                document.getElementById('visu-status').className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-                document.getElementById('btn-connect-home').textContent = "Piano Connecté ✓";
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        document.getElementById('btn-connect-home').addEventListener('click', connectBluetoothPiano);
-    </script>
-</body>
-</html>
+                    <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Library</span>
+                    <h2 class="
