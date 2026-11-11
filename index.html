@@ -68,11 +68,16 @@
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen flex flex-col font-sans antialiased select-none">
 
-    <!-- PAGE ACCUEIL (Dashboard style Roland App) -->
+    <!-- PAGE ACCUEIL -->
     <div id="view-home" class="flex-1 flex flex-col p-4 max-w-md w-full mx-auto justify-between space-y-3">
+        <!-- En-tête : Titre à gauche, Bouton Bluetooth connecté/déconnecté à droite -->
         <header class="flex items-center justify-between py-2">
-            <h1 class="font-bold text-xl tracking-tight text-white">Dashboard</h1>
-            <div id="home-status" class="w-3 h-3 rounded-full bg-amber-500"></div>
+            <h1 class="font-bold text-xl tracking-tight text-white">Helium Music</h1>
+            
+            <button id="btn-connect-home" class="bg-cardbg border border-slate-800 hover:border-orange-500/50 py-1.5 px-3 rounded-xl shadow-md flex items-center space-x-2 transition">
+                <span class="text-xs font-medium text-slate-300">Piano</span>
+                <div id="home-status" class="w-3 h-3 rounded-full bg-orange-500"></div>
+            </button>
         </header>
 
         <!-- Cartes du Dashboard -->
@@ -109,34 +114,28 @@
             </div>
         </div>
 
-        <!-- Bouton Connexion Bluetooth -->
-        <button id="btn-connect-home" class="w-full py-3.5 px-6 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-semibold text-sm shadow-lg shadow-orange-600/20 transition flex items-center justify-center space-x-2">
-            <span>Connecter le Piano Bluetooth</span>
-        </button>
+        <div></div> <!-- Espace vide pour garder l'équilibre vertical -->
     </div>
 
-    <!-- PAGE RECORDER / VISUALISEUR (Vertical avec flux de notes et clavier en bas) -->
+    <!-- PAGE RECORDER / VISUALISEUR -->
     <div id="view-recorder" class="flex-1 hidden flex-col p-3 max-w-md w-full mx-auto justify-between space-y-2">
-        <!-- En-tête style Recorder -->
         <div class="flex items-center justify-between py-2 px-1">
             <button id="nav-to-home" class="text-slate-400 hover:text-white flex items-center space-x-1 text-sm font-medium">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 <span>Recorder</span>
             </button>
             <div class="flex items-center space-x-2">
-                <div id="rec-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                <div id="rec-status-dot" class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
                 <span id="timer-display" class="text-xs font-mono text-slate-300">00:00:00</span>
             </div>
         </div>
 
-        <!-- Zone d'affichage des traits de notes montants (Piano Roll vertical) -->
         <div class="flex-1 bg-cardbg border border-slate-800 rounded-2xl p-2 relative overflow-hidden flex flex-col justify-end shadow-inner min-h-[320px]">
             <div id="notes-stream" class="w-full h-full flex items-end justify-center relative">
                 <span class="text-xs text-slate-600 italic self-center">Prêt - Jouez sur votre piano...</span>
             </div>
         </div>
 
-        <!-- Clavier Virtuel Complet en bas (style compact multi-octaves) -->
         <div class="bg-cardbg border border-slate-800 rounded-xl p-2 shadow-lg">
             <div id="keyboard-container" class="piano-keyboard-vertical"></div>
         </div>
@@ -155,7 +154,6 @@
             viewHome.classList.remove('hidden');
         });
 
-        // Synthétiseur interne harmonisé et propre
         let audioCtx = null;
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -185,7 +183,6 @@
             osc.stop(now + 1.5);
         }
 
-        // Génération du Clavier Complet (C2=36 à C7=96)
         const keyboardContainer = document.getElementById('keyboard-container');
         const noteNamesGlobal = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         const keyElements = {};
@@ -223,7 +220,6 @@
             if (keyElements[midi]) keyElements[midi].classList.remove('active');
         }
 
-        // Animation des traits montants (flux de notes)
         const notesStream = document.getElementById('notes-stream');
         function spawnFallingNote(midi) {
             if (notesStream.querySelector('italic')) {
@@ -248,7 +244,6 @@
             }, 1000);
         }
 
-        // Connexion Bluetooth MIDI
         async function connectBluetoothPiano() {
             try {
                 const device = await navigator.bluetooth.requestDevice({
@@ -277,7 +272,6 @@
 
                 document.getElementById('home-status').className = "w-3 h-3 rounded-full bg-emerald-500";
                 document.getElementById('rec-status-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-                document.getElementById('btn-connect-home').textContent = "Piano Connecté ✓";
             } catch (err) {
                 console.error(err);
             }
