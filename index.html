@@ -366,7 +366,7 @@
             });
         }
 
-        // Logique de lecture fluide avec respect du maintien des notes et de la pédale naturelle
+        // Logique de lecture fluide et lissée (gain équilibré pour les aigus et lissage des attaques stridentes)
         let activeTimeouts = [];
         let activeAudioNodes = {};
         let isPlayerRunning = false;
@@ -410,24 +410,26 @@
                     if (!isPlayerRunning) return;
 
                     if (event.type === 9 && event.data2 > 0) {
-                        // Si la note jouait déjà, on la coupe proprement avant de relancer
                         if (activeAudioNodes[event.data1]) {
                             try { activeAudioNodes[event.data1].stop(); } catch(e) {}
                         }
                         try {
-                            activeAudioNodes[event.data1] = instrument.play(event.data1);
+                            // Lissage de la vélocité et boost léger des notes aiguës (> note 72) pour qu'elles ressortent bien
+                            let vel = event.data2 / 127;
+                            vel = Math.pow(vel, 0.8); // Arrondit les attaques trop sèches / stridentes
+                            if (event.data1 > 72) vel = Math.min(1.0, vel * 1.3); // Compensation des aigus
+
+                            activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: vel });
                         } catch(err) {}
                     } 
                     else if (event.type === 8 || (event.type === 9 && event.data2 === 0)) {
                         const note = event.data1;
                         if (activeAudioNodes[note]) {
                             if (sustainActive) {
-                                // Si la pédale est active, on garde la note en attente
                                 sustainedNotesToStop.add(note);
                             } else {
-                                // Sinon, on laisse une micro-transition naturelle (lâcher de touche réaliste)
                                 try {
-                                    activeAudioNodes[note].stop(audioCtx.currentTime + 0.15);
+                                    activeAudioNodes[note].stop(audioCtx.currentTime + 0.2); // Relâchement naturel en douceur
                                 } catch(e) {
                                     try { activeAudioNodes[note].stop(); } catch(err) {}
                                 }
@@ -438,11 +440,10 @@
                     else if (event.type === 11 && event.data1 === 64) {
                         sustainActive = event.data2 >= 64;
                         if (!sustainActive) {
-                            // Quand on lève la pédale, on relâche toutes les notes tenues par la pédale
                             sustainedNotesToStop.forEach(note => {
                                 if (activeAudioNodes[note]) {
                                     try {
-                                        activeAudioNodes[note].stop(audioCtx.currentTime + 0.15);
+                                        activeAudioNodes[note].stop(audioCtx.currentTime + 0.2);
                                     } catch(e) {
                                         try { activeAudioNodes[note].stop(); } catch(err) {}
                                     }
@@ -513,6 +514,7 @@
             renderLibrary();
         };
 
+        // Enregistrement ultra-fluide : capture pure des événements MIDI sans émettre de son en direct
         function handleMidiMessage(type, data1, data2) {
             if (isRecording) {
                 const timestamp = Date.now() - recordingStartTime;
