@@ -145,7 +145,7 @@
             viewHome.classList.remove('hidden');
         });
 
-        // Utilisation d'un lecteur d'échantillons audio réalistes (Soundfont de piano acoustique)
+        // Gestion audio uniquement pour l'interaction tactile (si on clique sur l'écran)
         let audioCtx = null;
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -155,7 +155,6 @@
             initAudio();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            // Chargement d'un sample de piano acoustique propre et réaliste
             const sampleUrl = `https://tonejs.github.io/audio/salamander/${getNoteNameWithOctave(midiNote)}.mp3`;
 
             fetch(sampleUrl)
@@ -173,7 +172,6 @@
                     source.start();
                 })
                 .catch(err => {
-                    // Fallback de secours si le sample ne charge pas
                     fallbackTone(midiNote);
                 });
         }
@@ -185,7 +183,6 @@
             return noteName + octave;
         }
 
-        // Fallback propre si hors ligne
         function fallbackTone(midiNote) {
             const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
             const now = audioCtx.currentTime;
@@ -214,6 +211,7 @@
                 key.className = `key ${isBlack ? 'black' : 'white'}`;
                 key.dataset.midi = midi;
 
+                // Si on clique avec la souris/doigt sur l'écran, on joue le son tactile
                 key.addEventListener('mousedown', () => {
                     playAcousticPiano(midi);
                     activateKey(midi);
@@ -249,7 +247,7 @@
             chordEl.textContent = notesArray.join(' - ');
         }
 
-        // Connexion Bluetooth MIDI Réelle
+        // Connexion Bluetooth MIDI : UNIQUEMENT visuelle (pas de double son)
         async function connectBluetoothPiano() {
             try {
                 const device = await navigator.bluetooth.requestDevice({
@@ -269,8 +267,8 @@
                     const velocity = value.byteLength > 4 ? value.getUint8(4) : 0;
                     const command = status >> 4;
 
+                    // UNIQUEMENT mise à jour visuelle (pas d'appel à playAcousticPiano ici)
                     if (command === 9 && velocity > 0) {
-                        playAcousticPiano(note);
                         activateKey(note);
                     } else if (command === 8 || (command === 9 && velocity === 0)) {
                         deactivateKey(note);
