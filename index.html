@@ -94,7 +94,6 @@
         </div>
 
         <div class="bg-cardbg border border-slate-800 rounded-3xl p-5 shadow-lg flex items-center justify-around">
-            <!-- Bouton unique Enregistrer / Arrêter -->
             <button id="btn-toggle-rec" class="bg-red-600 hover:bg-red-500 text-white py-4 px-8 rounded-2xl shadow-md transition flex items-center space-x-3" disabled>
                 <div id="rec-btn-dot" class="w-4 h-4 rounded-full bg-white animate-pulse"></div>
                 <span id="rec-btn-text" class="text-sm font-semibold">Enregistrer</span>
@@ -232,10 +231,10 @@
         // Bouton unique Enregistrer / Arrêter
         btnToggleRec.addEventListener('click', () => {
             if (!isRecording) {
-                // Démarrage
+                // Démarrage avec un léger décalage de sécurité pour éviter de couper l'attaque de la première note
                 isRecording = true;
                 recordedEvents = [];
-                recordingStartTime = Date.now();
+                recordingStartTime = Date.now() + 400; // Marge de sécurité de 400ms au début
                 
                 btnToggleRec.className = "bg-slate-800 hover:bg-slate-700 text-white py-4 px-8 rounded-2xl shadow-md transition flex items-center space-x-3";
                 recBtnDot.className = "w-4 h-4 rounded-full bg-red-500 animate-ping";
@@ -303,7 +302,6 @@
             modalSave.classList.add('hidden');
             recordedEvents = [];
             
-            // Redirection vers la bibliothèque
             viewRecorder.classList.add('hidden');
             viewLibrary.classList.remove('hidden');
             renderLibrary();
@@ -340,7 +338,7 @@
             });
         }
 
-        // Lecture d'un morceau de la bibliothèque
+        // Lecture d'un morceau de la bibliothèque avec gestion fluide des accords et de la saturation
         window.playTrack = function(id) {
             const track = savedTracks.find(t => t.id === id);
             if (!track || !instrument) return;
@@ -351,11 +349,16 @@
 
             track.events.forEach(event => {
                 setTimeout(() => {
+                    // Sécurité anti-saturation sur les grosses charges de notes simultanées
                     if (event.type === 9 && event.data2 > 0) {
                         if (activeAudioNodes[event.data1]) {
                             try { activeAudioNodes[event.data1].stop(); } catch(e) {}
                         }
-                        activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: event.data2 / 127 });
+                        try {
+                            activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: event.data2 / 127 });
+                        } catch(err) {
+                            console.error("Erreur lecture note:", err);
+                        }
                     } 
                     else if (event.type === 8 || (event.type === 9 && event.data2 === 0)) {
                         const note = event.data1;
@@ -380,11 +383,10 @@
                             sustainedNotesToStop.clear();
                         }
                     }
-                }, event.timestamp);
+                }, Math.max(0, event.timestamp)); // Empêche les timestamps négatifs au démarrage
             });
         };
 
-        // Suppression d'un morceau
         window.deleteTrack = function(id) {
             savedTracks = savedTracks.filter(t => t.id !== id);
             localStorage.setItem('helium_saved_tracks', JSON.stringify(savedTracks));
@@ -393,7 +395,8 @@
 
         function handleMidiMessage(type, data1, data2) {
             if (isRecording) {
-                const timestamp = Date.now() - recordingStartTime;
+                let timestamp = Date.now() - recordingStartTime;
+                if (timestamp < 0) timestamp = 0; // Force le premier temps à 0 proprement
                 recordedEvents.push({ timestamp, type, data1, data2 });
             }
         }
