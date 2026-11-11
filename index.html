@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Helium Music - Roland FP-30X Companion</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inclusion de soundfont-player pour charger le fichier .sf2 / échantillons -->
+    <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -85,7 +87,7 @@
                 </div>
                 <div>
                     <h2 class="font-bold text-lg text-slate-200">Clavier &amp; Visualiseur</h2>
-                    <p class="text-xs text-slate-400 mt-1">Affichage des notes en direct</p>
+                    <p class="text-xs text-slate-400 mt-1">Affichage des notes en direct &amp; Son Yamaha PSR-260</p>
                 </div>
             </button>
         </div>
@@ -112,7 +114,7 @@
         <!-- Zone de flux des notes montantes (monte jusqu'en haut) -->
         <div class="flex-1 bg-cardbg border border-slate-800 rounded-2xl p-2 relative overflow-hidden flex flex-col justify-end shadow-inner min-h-[360px]">
             <div id="notes-stream" class="w-full h-full flex items-end justify-center relative">
-                <span class="text-xs text-slate-600 italic self-center">Jouez sur votre piano...</span>
+                <span class="text-xs text-slate-600 italic self-center">Chargement du son Yamaha PSR-260...</span>
             </div>
         </div>
 
@@ -135,148 +137,23 @@
             viewHome.classList.remove('hidden');
         });
 
-        // Synthétiseur audio tactile (uniquement au clic sur l'écran)
+        // Gestion Audio & Chargement du SoundFont Yamaha PSR-260 depuis GitHub
         let audioCtx = null;
+        let instrument = null;
+
         function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-
-        function playCleanPianoTone(midiNote) {
-            initAudio();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
-            const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
-            const now = audioCtx.currentTime;
-
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            osc.type = 'triangle'; // Son plus doux
-            osc.frequency.setValueAtTime(freq, now);
-
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
-
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            osc.start(now);
-            osc.stop(now + 1.5);
-        }
-
-        // Génération du Clavier Complet (C2=36 à C7=96)
-        const keyboardContainer = document.getElementById('keyboard-container');
-        const noteNamesGlobal = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-        const keyElements = {};
-        let activeNotes = new Set();
-
-        function buildKeyboard() {
-            for (let midi = 36; midi <= 96; midi++) {
-                const name = noteNamesGlobal[midi % 12];
-                const isBlack = name.includes('#');
-                const key = document.createElement('div');
-                key.className = `key ${isBlack ? 'black' : 'white'}`;
-                key.dataset.midi = midi;
-
-                key.addEventListener('mousedown', () => {
-                    playCleanPianoTone(midi);
-                    activateKey(midi);
-                });
-                key.addEventListener('mouseup', () => deactivateKey(midi));
-                key.addEventListener('mouseleave', () => deactivateKey(midi));
-
-                keyboardContainer.appendChild(key);
-                keyElements[midi] = key;
-            }
-        }
-        buildKeyboard();
-
-        function activateKey(midi) {
-            activeNotes.add(midi);
-            if (keyElements[midi]) keyElements[midi].classList.add('active');
-            updateChordDisplay();
-            spawnFallingNote(midi);
-        }
-
-        function deactivateKey(midi) {
-            activeNotes.delete(midi);
-            if (keyElements[midi]) keyElements[midi].classList.remove('active');
-            updateChordDisplay();
-        }
-
-        function updateChordDisplay() {
-            const chordEl = document.getElementById('chord-display');
-            if (activeNotes.size === 0) {
-                chordEl.textContent = "-";
-                return;
-            }
-            const notesArray = Array.from(activeNotes).map(n => noteNamesGlobal[n % 12]);
-            chordEl.textContent = notesArray.join(' - ');
-        }
-
-        // Animation des traits montants traversant tout l'écran
-        const notesStream = document.getElementById('notes-stream');
-        function spawnFallingNote(midi) {
-            if (notesStream.querySelector('italic')) {
-                notesStream.innerHTML = '';
-            }
-            const bar = document.createElement('div');
-            bar.className = 'absolute bottom-0 w-2 bg-gradient-to-t from-sky-500 to-indigo-500 rounded-t-full transition-all duration-1000 opacity-90';
-            
-            const percent = ((midi - 36) / (96 - 36)) * 95;
-            bar.style.left = percent + '%';
-            bar.style.height = '6px';
-            
-            notesStream.appendChild(bar);
-
-            // Monte jusqu'à 100% de la hauteur du conteneur
-            setTimeout(() => {
-                bar.style.height = '100vh';
-                bar.style.opacity = '0';
-            }, 20);
-
-            setTimeout(() => {
-                bar.remove();
-            }, 1000);
-        }
-
-        // Connexion Bluetooth MIDI (Détecte et affiche les notes en direct sans double son)
-        async function connectBluetoothPiano() {
-            try {
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: ['03b80e5a-ede8-4b33-a751-6ce34ec4c700'] }],
-                    optionalServices: ['03b80e5a-ede8-4b33-a751-6ce34ec4c700']
-                });
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService('03b80e5a-ede8-4b33-a751-6ce34ec4c700');
-                const characteristic = await service.getCharacteristic('7772e5db-3868-4112-a1a9-f2669d106bf3');
-
-                await characteristic.startNotifications();
-                characteristic.addEventListener('characteristicvaluechanged', (e) => {
-                    const value = e.target.value;
-                    if (value.byteLength < 3) return;
-                    const status = value.getUint8(2);
-                    const note = value.getUint8(3);
-                    const velocity = value.byteLength > 4 ? value.getUint8(4) : 0;
-                    const command = status >> 4;
-
-                    if (command === 9 && velocity > 0) {
-                        activateKey(note);
-                    } else if (command === 8 || (command === 9 && velocity === 0)) {
-                        deactivateKey(note);
-                    }
-                });
-
-                document.getElementById('home-status').className = "w-3 h-3 rounded-full bg-emerald-500";
-                document.getElementById('visu-status').className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-                document.getElementById('btn-connect-home').textContent = "Piano Connecté ✓";
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        document.getElementById('btn-connect-home').addEventListener('click', connectBluetoothPiano);
-    </script>
-</body>
-</html>
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Chargement du SoundFont depuis ton dépôt GitHub (remplace par le chemin brut ou l'URL de ton fichier)
+                // Note : Assure-toi que le nom du fichier correspond exactement à celui sur GitHub (attention aux espaces ou remplace-le par un lien direct raw)
+                Soundfont.instrument(audioCtx, 'Yamaha PSR 260 001 Grand Piano.sf2', {
+                    // Si le fichier SF2 est directement à la racine du dépôt GitHub, le nom suffit. 
+                    // Sinon indique le chemin relatif (ex: 'assets/Yamaha PSR 260 001 Grand Piano.sf2')
+                }).then(inst => {
+                    instrument = inst;
+                    const italicText = document.querySelector('#notes-stream italic');
+                    if (italicText) italicText.textContent = "Jouez sur votre piano...";
+                }).catch(err => {
+                    console.error("Erreur de chargement du SoundFont, passage au mode synthétiseur de secours", err);
+                    const italic
