@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Helium Music - Roland FP-30X Companion</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inclusion de soundfont-player pour lire le fichier .sf2 -->
-    <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -137,50 +135,34 @@
             viewHome.classList.remove('hidden');
         });
 
-        // Synthétiseur audio tactile et chargement du Yamaha PSR-260
+        // Synthétiseur audio tactile (uniquement au clic sur l'écran)
         let audioCtx = null;
-        let instrument = null;
-
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                
-                // Chargement du SoundFont Yamaha depuis GitHub
-                Soundfont.instrument(audioCtx, 'Yamaha PSR 260 001 Grand Piano.sf2').then(inst => {
-                    instrument = inst;
-                }).catch(err => {
-                    console.error("Erreur de chargement du SoundFont, utilisation du mode de secours", err);
-                });
-            }
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
 
         function playCleanPianoTone(midiNote) {
             initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            // Si le son Yamaha est chargé, on l'utilise, sinon synthétiseur de secours
-            if (instrument) {
-                instrument.play(midiNote);
-            } else {
-                const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
-                const now = audioCtx.currentTime;
+            const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+            const now = audioCtx.currentTime;
 
-                const osc = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
 
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(freq, now);
+            osc.type = 'triangle'; // Son plus doux
+            osc.frequency.setValueAtTime(freq, now);
 
-                gainNode.gain.setValueAtTime(0, now);
-                gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
 
-                osc.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
 
-                osc.start(now);
-                osc.stop(now + 1.5);
-            }
+            osc.start(now);
+            osc.stop(now + 1.5);
         }
 
         // Génération du Clavier Complet (C2=36 à C7=96)
@@ -236,9 +218,8 @@
         // Animation des traits montants traversant tout l'écran
         const notesStream = document.getElementById('notes-stream');
         function spawnFallingNote(midi) {
-            const italicEl = notesStream.querySelector('span.italic');
-            if (italicEl) {
-                italicEl.remove();
+            if (notesStream.querySelector('italic')) {
+                notesStream.innerHTML = '';
             }
             const bar = document.createElement('div');
             bar.className = 'absolute bottom-0 w-2 bg-gradient-to-t from-sky-500 to-indigo-500 rounded-t-full transition-all duration-1000 opacity-90';
@@ -281,7 +262,6 @@
                     const command = status >> 4;
 
                     if (command === 9 && velocity > 0) {
-                        playCleanPianoTone(note);
                         activateKey(note);
                     } else if (command === 8 || (command === 9 && velocity === 0)) {
                         deactivateKey(note);
