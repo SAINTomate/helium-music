@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Helium Music - Roland FP-30X Companion</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inclusion de la bibliothèque Soundfont Player -->
+    <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -87,7 +89,7 @@
         </div>
 
         <div class="flex-1 bg-cardbg border border-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center space-y-6 shadow-lg">
-            <div id="rec-state-text" class="text-slate-400 text-sm font-medium">Prêt à enregistrer</div>
+            <div id="rec-state-text" class="text-slate-400 text-sm font-medium">Chargement du son Yamaha...</div>
             
             <div class="text-center">
                 <span id="recorded-notes-count" class="text-4xl font-extrabold text-white">0</span>
@@ -96,7 +98,7 @@
         </div>
 
         <div class="bg-cardbg border border-slate-800 rounded-3xl p-5 shadow-lg flex items-center justify-around">
-            <button id="btn-start-rec" class="bg-red-600 hover:bg-red-500 text-white p-4 rounded-2xl shadow-md transition flex items-center space-x-2">
+            <button id="btn-start-rec" class="bg-red-600 hover:bg-red-500 text-white p-4 rounded-2xl shadow-md transition flex items-center space-x-2" disabled>
                 <div class="w-4 h-4 rounded-full bg-white animate-pulse"></div>
                 <span class="text-sm font-semibold">Enregistrer</span>
             </button>
@@ -142,46 +144,46 @@
             }
         });
 
-        // Synthétiseur de secours (utilisé uniquement lors de la relecture pour l'instant)
+        // Initialisation de l'AudioContext et du lecteur Soundfont
         let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let instrument = null;
+        const recStateText = document.getElementById('rec-state-text');
+        const btnStartRec = document.getElementById('btn-start-rec');
+
+        function initAudioAndInstrument() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            if (!instrument) {
+                // Chargement du Soundfont depuis le dossier assets sur GitHub
+                Soundfont.instrument(audioCtx, 'assets/yamaha-grand.sf2').then(function (player) {
+                    instrument = player;
+                    recStateText.textContent = "Prêt à enregistrer";
+                    btnStartRec.disabled = false;
+                }).catch(function (err) {
+                    console.error("Erreur de chargement du Soundfont :", err);
+                    recStateText.textContent = "Erreur de chargement du son";
+                });
+            }
         }
 
-        function playCleanPianoTone(midiNote) {
-            initAudio();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
-            const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
-            const now = audioCtx.currentTime;
-
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, now);
-
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
-
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            osc.start(now);
-            osc.stop(now + 1.5);
-        }
+        // Déclencher l'init audio au premier clic sur l'application
+        document.body.addEventListener('click', () => {
+            initAudioAndInstrument();
+        }, { once: true });
 
         let isRecording = false;
         let recordingStartTime = 0;
         let recordedEvents = [];
         let timerInterval = null;
 
-        const btnStartRec = document.getElementById('btn-start-rec');
         const btnStopRec = document.getElementById('btn-stop-rec');
         const btnPlayRec = document.getElementById('btn-play-rec');
         const recStatusDot = document.getElementById('rec-status-dot');
-        const recStateText = document.getElementById('rec-state-text');
         const recordedNotesCount = document.getElementById('recorded-notes-count');
         const timerDisplay = document.getElementById('timer-display');
 
@@ -221,22 +223,23 @@
 
         function handleMidiMessage(note, velocity, command) {
             if (isRecording) {
-                const timestamp = Date.const ? 0 : Date.now() - recordingStartTime;
+                const timestamp = Date.now() - recordingStartTime;
                 recordedEvents.push({ timestamp, note, velocity, command });
                 recordedNotesCount.textContent = recordedEvents.length;
             }
         }
 
         btnPlayRec.addEventListener('click', () => {
-            if (recordedEvents.length === 0) return;
+            if (recordedEvents.length === 0 || !instrument) return;
             
-            recStateText.textContent = "Lecture de votre performance...";
+            recStateText.textContent = "Lecture avec le son Yamaha...";
             btnPlayRec.disabled = true;
 
             recordedEvents.forEach(event => {
                 setTimeout(() => {
                     if (event.command === 9 && event.velocity > 0) {
-                        playCleanNotes(event.note);
+                        // Lecture de la note via le vrai fichier .sf2 Yamaha
+                        instrument.play(event.note);
                     }
                 }, event.timestamp);
             });
@@ -247,10 +250,6 @@
                 btnPlayRec.disabled = false;
             }, totalDuration);
         });
-
-        function playCleanNotes(note) {
-            playCleanPianoTone(note);
-        }
 
         async function connectBluetoothPiano() {
             try {
@@ -271,7 +270,6 @@
                     const velocity = value.byteLength > 4 ? value.getUint8(4) : 0;
                     const command = status >> 4;
 
-                    // On enregistre les notes jouées SANS émettre de son en direct
                     if (command === 9 && velocity > 0) {
                         handleMidiMessage(note, velocity, 9);
                     } else if (command === 8 || (command === 9 && velocity === 0)) {
