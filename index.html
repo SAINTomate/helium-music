@@ -70,7 +70,7 @@
 
     <!-- PAGE ACCUEIL -->
     <div id="view-home" class="flex-1 flex flex-col p-4 max-w-md w-full mx-auto justify-between space-y-4">
-        <!-- En-tête : Titre et Connexion agrandis -->
+        <!-- En-tête : Titre et Connexion -->
         <header class="flex items-center justify-between py-3">
             <h1 class="font-extrabold text-4xl tracking-tight text-white">Helium Music</h1>
             
@@ -80,16 +80,26 @@
             </button>
         </header>
 
-        <!-- Cartes du Dashboard agrandies -->
+        <!-- Cartes du Dashboard -->
         <div class="flex-1 flex flex-col space-y-4 justify-center">
-            <!-- Carte Library -->
-            <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 shadow-lg flex items-center justify-between">
-                <div>
-                    <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Library</span>
-                    <h2 class="font-bold text-lg text-slate-100 mt-1">Classical Melodies Vol.1</h2>
+            
+            <!-- Section Morceau Actuel (Lecteur ouvert avec Pause / Play) -->
+            <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 shadow-lg flex flex-col space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">En cours de diffusion</span>
+                        <h2 class="font-bold text-xl text-slate-100 mt-1" id="current-track-title">Classical Melodies Vol.1</h2>
+                    </div>
                 </div>
-                <div class="bg-orange-600 text-white p-4 rounded-2xl shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
+                <!-- Contrôles de lecture -->
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                    <span class="text-xs text-slate-400 font-mono" id="track-time">00:00 / 03:45</span>
+                    <button id="btn-play-pause" class="bg-orange-600 hover:bg-orange-500 text-white p-3.5 rounded-2xl shadow-md transition flex items-center justify-center">
+                        <!-- Icône Play par défaut -->
+                        <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
+                        <!-- Icône Pause (cachée par défaut) -->
+                        <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current hidden" viewBox="0 0 20 20"><path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/></svg>
+                    </button>
                 </div>
             </div>
 
@@ -152,6 +162,23 @@
         document.getElementById('nav-to-home').addEventListener('click', () => {
             viewRecorder.classList.add('hidden');
             viewHome.classList.remove('hidden');
+        });
+
+        // Gestion bascule Play / Pause sur la carte du lecteur ouvert
+        const btnPlayPause = document.getElementById('btn-play-pause');
+        const iconPlay = document.getElementById('icon-play');
+        const iconPause = document.getElementById('icon-pause');
+        let isPlaying = false;
+
+        btnPlayPause.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                iconPlay.classList.add('hidden');
+                iconPause.classList.remove('hidden');
+            } else {
+                iconPause.classList.add('hidden');
+                iconPlay.classList.remove('hidden');
+            }
         });
 
         let audioCtx = null;
