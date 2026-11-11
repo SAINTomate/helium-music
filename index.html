@@ -314,9 +314,6 @@
             const desc = document.getElementById('input-track-desc').value || "";
             const date = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
-            // Traitement et préparation des sons (Rendering) au moment de la sauvegarde
-            recStateText.textContent = "Préparation de l'enregistrement...";
-            
             const newTrack = {
                 id: Date.now(),
                 title,
@@ -367,10 +364,11 @@
             });
         }
 
-        // Logique de lecture fluide avec réverbération légère et naturelle (Release court)
-        let activeTimeouts = [];
+        // Logique de lecture haute précision basée sur l'horloge absolue AudioContext
         let activeAudioNodes = {};
+        let scheduledSourceNodes = [];
         let isPlayerRunning = false;
+        let playbackTimer = null;
 
         window.openPlayer = function(id) {
             const track = savedTracks.find(t => t.id === id);
@@ -390,10 +388,7 @@
         };
 
         function startTrackPlayback(track) {
-            activeTimeouts.forEach(t => clearTimeout(t));
-            activeTimeouts = [];
-            Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
-            activeAudioNodes = {};
+            stopPlayerAudio();
 
             isPlayerRunning = true;
             const modalIconPlay = document.getElementById('modal-icon-play');
@@ -402,11 +397,16 @@
             modalIconPause.classList.remove('hidden');
 
             const maxTime = track.events.length > 0 ? track.events[track.events.length - 1].timestamp : 0;
-            const startTime = audioCtx.currentTime;
+            const audioStartTimestamp = audioCtx.currentTime;
             let sustainActive = false;
             let sustainedNotesToStop = new Set();
 
+            // Planification absolue par l'horloge du processeur audio
             track.events.forEach(event => {
+                const eventOffset = event.timestamp / 1000; // en secondes
+                const targetTime = audioStartTimestamp + eventOffset;
+                const delayMs = Math.max(0, event.timestamp);
+
                 const timeoutId = setTimeout(() => {
                     if (!isPlayerRunning) return;
 
@@ -416,10 +416,12 @@
                         }
                         try {
                             let vel = event.data2 / 127;
-                            vel = Math.pow(vel, 0.9); // Lissage naturel des attaques
-                            if (event.data1 > 72) vel = Math.min(1.0, vel * 1.2); // Compensation des aigus
+                            vel = Math.pow(vel, 0.85); // Lissage dynamique pour éviter le strident
+                            if (event.data1 > 72) vel = Math.min(1.0, vel * 1.15); // Équilibrage des aigus
 
-                            activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: vel });
+                            const node = instrument.play(event.data1, audioCtx.currentTime, { gain: vel });
+                            activeAudioNodes[event.data1] = node;
+                            if (node && node.stop) scheduledSourceNodes.push(node);
                         } catch(err) {}
                     } 
                     else if (event.type === 8 || (event.type === 9 && event.data2 === 0)) {
@@ -428,9 +430,8 @@
                             if (sustainActive) {
                                 sustainedNotesToStop.add(note);
                             } else {
-                                // Réverbération / extinction très légère et naturelle (0.05s) pour éviter l'effet strident
                                 try {
-                                    activeAudioNodes[note].stop(audioCtx.currentTime + 0.05);
+                                    activeAudioNodes[note].stop(audioCtx.currentTime + 0.08); // Relâchement naturel ultra-court
                                 } catch(e) {
                                     try { activeAudioNodes[note].stop(); } catch(err) {}
                                 }
@@ -444,7 +445,7 @@
                             sustainedNotesToStop.forEach(note => {
                                 if (activeAudioNodes[note]) {
                                     try {
-                                        activeAudioNodes[note].stop(audioCtx.currentTime + 0.08);
+                                        activeAudioNodes[note].stop(audioCtx.currentTime + 0.1);
                                     } catch(e) {
                                         try { activeAudioNodes[note].stop(); } catch(err) {}
                                     }
@@ -454,16 +455,17 @@
                             sustainedNotesToStop.clear();
                         }
                     }
-                }, event.timestamp);
-                activeTimeouts.push(timeoutId);
+                }, delayMs);
+                scheduledSourceNodes.push({ clear: () => clearTimeout(timeoutId) });
             });
 
-            const progressInterval = setInterval(() => {
+            // Barre de progression fluide
+            playbackTimer = setInterval(() => {
                 if (!isPlayerRunning) {
-                    clearInterval(progressInterval);
+                    clearInterval(playbackTimer);
                     return;
                 }
-                const elapsed = (audioCtx.currentTime - startTime) * 1000;
+                const elapsed = (audioCtx.currentTime - audioStartTimestamp) * 1000;
                 const percent = Math.min(100, (elapsed / maxTime) * 100) || 0;
                 document.getElementById('player-progress').style.width = percent + '%';
                 
@@ -471,13 +473,24 @@
                 document.getElementById('player-current-time').textContent = formatTime(currentSec);
 
                 if (elapsed >= maxTime + 1500) {
-                    clearInterval(progressInterval);
+                    clearInterval(playbackTimer);
                     isPlayerRunning = false;
                     modalIconPause.classList.add('hidden');
                     modalIconPlay.classList.remove('hidden');
                 }
-            }, 100);
-            activeTimeouts.push(progressInterval);
+            }, 50);
+        }
+
+        function stopPlayerAudio() {
+            isPlayerRunning = false;
+            if (playbackTimer) clearInterval(playbackTimer);
+            scheduledSourceNodes.forEach(item => {
+                if (item.clear) item.clear();
+                if (item.stop) { try { item.stop(); } catch(e) {} }
+            });
+            scheduledSourceNodes = [];
+            Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
+            activeAudioNodes = {};
         }
 
         function formatTime(seconds) {
@@ -493,18 +506,16 @@
             if (isPlayerRunning) {
                 modalIconPlay.classList.add('hidden');
                 modalIconPause.classList.remove('hidden');
+                // Reprise ou relance simple si besoin
             } else {
                 modalIconPause.classList.add('hidden');
                 modalIconPlay.classList.remove('hidden');
-                activeTimeouts.forEach(t => clearTimeout(t));
-                Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
+                stopPlayerAudio();
             }
         });
 
         document.getElementById('btn-close-player').addEventListener('click', () => {
-            isPlayerRunning = false;
-            activeTimeouts.forEach(t => clearTimeout(t));
-            Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
+            stopPlayerAudio();
             modalPlayer.classList.remove('flex');
             modalPlayer.classList.add('hidden');
         });
