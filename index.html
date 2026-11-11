@@ -366,7 +366,7 @@
             });
         }
 
-        // Logique de lecture d'origine (sans modification de gain restrictive)
+        // Logique de lecture fluide avec respect du maintien des notes et de la pédale naturelle
         let activeTimeouts = [];
         let activeAudioNodes = {};
         let isPlayerRunning = false;
@@ -410,11 +410,11 @@
                     if (!isPlayerRunning) return;
 
                     if (event.type === 9 && event.data2 > 0) {
+                        // Si la note jouait déjà, on la coupe proprement avant de relancer
                         if (activeAudioNodes[event.data1]) {
                             try { activeAudioNodes[event.data1].stop(); } catch(e) {}
                         }
                         try {
-                            // Restitution standard avec la vélocité d'origine sans bride
                             activeAudioNodes[event.data1] = instrument.play(event.data1);
                         } catch(err) {}
                     } 
@@ -422,9 +422,15 @@
                         const note = event.data1;
                         if (activeAudioNodes[note]) {
                             if (sustainActive) {
+                                // Si la pédale est active, on garde la note en attente
                                 sustainedNotesToStop.add(note);
                             } else {
-                                try { activeAudioNodes[note].stop(); } catch(e) {}
+                                // Sinon, on laisse une micro-transition naturelle (lâcher de touche réaliste)
+                                try {
+                                    activeAudioNodes[note].stop(audioCtx.currentTime + 0.15);
+                                } catch(e) {
+                                    try { activeAudioNodes[note].stop(); } catch(err) {}
+                                }
                                 delete activeAudioNodes[note];
                             }
                         }
@@ -432,9 +438,14 @@
                     else if (event.type === 11 && event.data1 === 64) {
                         sustainActive = event.data2 >= 64;
                         if (!sustainActive) {
+                            // Quand on lève la pédale, on relâche toutes les notes tenues par la pédale
                             sustainedNotesToStop.forEach(note => {
                                 if (activeAudioNodes[note]) {
-                                    try { activeAudioNodes[note].stop(); } catch(e) {}
+                                    try {
+                                        activeAudioNodes[note].stop(audioCtx.currentTime + 0.15);
+                                    } catch(e) {
+                                        try { activeAudioNodes[note].stop(); } catch(err) {}
+                                    }
                                     delete activeAudioNodes[note];
                                 }
                             });
@@ -461,7 +472,7 @@
                     clearInterval(progressInterval);
                     isPlayerRunning = false;
                     modalIconPause.classList.add('hidden');
-                    modalIconPlay.classList.add('hidden'); // Corrigé pour afficher le play à la fin
+                    modalIconPlay.classList.remove('hidden');
                 }
             }, 100);
             activeTimeouts.push(progressInterval);
