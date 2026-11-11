@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Helium Music - Roland FP-30X Companion</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inclusion de la bibliothèque Soundfont Player -->
     <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
     <script>
         tailwind.config = {
@@ -89,7 +88,7 @@
         </div>
 
         <div class="flex-1 bg-cardbg border border-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center space-y-6 shadow-lg">
-            <div id="rec-state-text" class="text-slate-400 text-sm font-medium">Chargement du son Yamaha...</div>
+            <div id="rec-state-text" class="text-slate-400 text-sm font-medium">Chargement du piano...</div>
             
             <div class="text-center">
                 <span id="recorded-notes-count" class="text-4xl font-extrabold text-white">0</span>
@@ -144,7 +143,6 @@
             }
         });
 
-        // Initialisation de l'AudioContext et du lecteur Soundfont
         let audioCtx = null;
         let instrument = null;
         const recStateText = document.getElementById('rec-state-text');
@@ -159,19 +157,18 @@
             }
 
             if (!instrument) {
-                // Chargement du Soundfont depuis le dossier assets sur GitHub
-                Soundfont.instrument(audioCtx, 'assets/yamaha-grand.sf2').then(function (player) {
+                // Chargement d'un instrument de piano acoustique haute qualité intégré
+                Soundfont.instrument(audioCtx, 'acoustic_grand_piano').then(function (player) {
                     instrument = player;
                     recStateText.textContent = "Prêt à enregistrer";
                     btnStartRec.disabled = false;
                 }).catch(function (err) {
-                    console.error("Erreur de chargement du Soundfont :", err);
+                    console.error("Erreur :", err);
                     recStateText.textContent = "Erreur de chargement du son";
                 });
             }
         }
 
-        // Déclencher l'init audio au premier clic sur l'application
         document.body.addEventListener('click', () => {
             initAudioAndInstrument();
         }, { once: true });
@@ -232,13 +229,12 @@
         btnPlayRec.addEventListener('click', () => {
             if (recordedEvents.length === 0 || !instrument) return;
             
-            recStateText.textContent = "Lecture avec le son Yamaha...";
+            recStateText.textContent = "Lecture de votre performance...";
             btnPlayRec.disabled = true;
 
             recordedEvents.forEach(event => {
                 setTimeout(() => {
                     if (event.command === 9 && event.velocity > 0) {
-                        // Lecture de la note via le vrai fichier .sf2 Yamaha
                         instrument.play(event.note);
                     }
                 }, event.timestamp);
