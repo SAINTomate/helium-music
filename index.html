@@ -52,23 +52,25 @@
                 </div>
             </div>
 
+            <!-- Carte Recorder / Enregistrement -->
             <button id="nav-to-recorder" class="bg-cardbg border border-slate-800 hover:border-orange-500/50 rounded-3xl p-6 shadow-lg flex items-center justify-between text-left transition group">
                 <div>
                     <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">Recorder</span>
-                    <h2 class="font-bold text-lg text-slate-100 mt-1">Enregistrement &amp; Restitution</h2>
+                    <h2 class="font-bold text-lg text-slate-100 mt-1">Nouvel Enregistrement</h2>
                 </div>
                 <div class="bg-orange-600/20 text-orange-500 p-4 rounded-2xl border border-orange-500/30 group-hover:scale-105 transition">
                     <div class="w-4 h-4 rounded-full bg-orange-500 animate-pulse"></div>
                 </div>
             </button>
 
-            <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 shadow-lg flex items-center justify-between opacity-75">
+            <!-- Carte Bibliothèque / Mes Morceaux -->
+            <button id="nav-to-library" class="bg-cardbg border border-slate-800 hover:border-orange-500/50 rounded-3xl p-6 shadow-lg flex items-center justify-between text-left transition group">
                 <div>
-                    <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Accompaniment</span>
-                    <h2 class="font-bold text-lg text-slate-200 mt-1">Styles &amp; Rythmes</h2>
+                    <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">Bibliothèque</span>
+                    <h2 class="font-bold text-lg text-slate-100 mt-1">Mes Enregistrements</h2>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-orange-500 group-hover:scale-105 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            </button>
         </div>
 
         <div></div>
@@ -77,7 +79,7 @@
     <!-- PAGE RECORDER / ENREGISTREMENT -->
     <div id="view-recorder" class="flex-1 hidden flex-col p-4 max-w-md w-full mx-auto justify-between space-y-4">
         <div class="flex items-center justify-between py-2">
-            <button id="nav-to-home" class="text-slate-400 hover:text-white flex items-center space-x-1 text-sm font-medium">
+            <button id="nav-to-home-from-rec" class="text-slate-400 hover:text-white flex items-center space-x-1 text-sm font-medium">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 <span>Retour</span>
             </button>
@@ -89,41 +91,85 @@
 
         <div class="flex-1 bg-cardbg border border-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center space-y-6 shadow-lg">
             <div id="rec-state-text" class="text-slate-400 text-sm font-medium">Chargement du piano...</div>
-            
-            <div class="text-center">
-                <span id="recorded-notes-count" class="text-4xl font-extrabold text-white">0</span>
-                <p class="text-xs text-slate-500 uppercase tracking-wider mt-1">Événements enregistrés</p>
-            </div>
         </div>
 
         <div class="bg-cardbg border border-slate-800 rounded-3xl p-5 shadow-lg flex items-center justify-around">
-            <button id="btn-start-rec" class="bg-red-600 hover:bg-red-500 text-white p-4 rounded-2xl shadow-md transition flex items-center space-x-2" disabled>
-                <div class="w-4 h-4 rounded-full bg-white animate-pulse"></div>
-                <span class="text-sm font-semibold">Enregistrer</span>
+            <!-- Bouton unique Enregistrer / Arrêter -->
+            <button id="btn-toggle-rec" class="bg-red-600 hover:bg-red-500 text-white py-4 px-8 rounded-2xl shadow-md transition flex items-center space-x-3" disabled>
+                <div id="rec-btn-dot" class="w-4 h-4 rounded-full bg-white animate-pulse"></div>
+                <span id="rec-btn-text" class="text-sm font-semibold">Enregistrer</span>
             </button>
+        </div>
+    </div>
 
-            <button id="btn-stop-rec" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-4 rounded-2xl shadow-md transition" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 fill-current" viewBox="0 0 20 20"><path d="M5 5h10v10H5z"/></svg>
+    <!-- PAGE BIBLIOTHÈQUE / MES ENREGISTREMENTS -->
+    <div id="view-library" class="flex-1 hidden flex-col p-4 max-w-md w-full mx-auto justify-between space-y-4">
+        <div class="flex items-center justify-between py-2">
+            <button id="nav-to-home-from-lib" class="text-slate-400 hover:text-white flex items-center space-x-1 text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                <span>Retour</span>
             </button>
+            <h2 class="font-bold text-lg text-white">Mes Enregistrements</h2>
+            <div class="w-5"></div>
+        </div>
 
-            <button id="btn-play-rec" class="bg-orange-600 hover:bg-orange-500 text-white p-4 rounded-2xl shadow-md transition flex items-center space-x-2" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 fill-current" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
-                <span class="text-sm font-semibold">Écouter</span>
-            </button>
+        <div class="flex-1 bg-cardbg border border-slate-800 rounded-3xl p-4 overflow-y-auto space-y-3 shadow-lg" id="library-list">
+            <div id="library-empty" class="text-center text-slate-500 text-sm py-20 italic">Aucun enregistrement pour le moment</div>
+        </div>
+    </div>
+
+    <!-- MODAL DE SAUVEGARDE -->
+    <div id="modal-save" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <h3 class="font-bold text-xl text-white">Conserver l'enregistrement ?</h3>
+            <p class="text-xs text-slate-400">Souhaitez-vous sauvegarder cette performance dans votre bibliothèque ?</p>
+            
+            <div class="space-y-3 pt-2">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Nom du morceau</label>
+                    <input type="text" id="input-track-name" class="w-full bg-darkbg border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500" placeholder="Ex : Improvisation 1">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Description (optionnelle)</label>
+                    <textarea id="input-track-desc" rows="2" class="w-full bg-darkbg border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500" placeholder="Ex : Joué avec la pédale..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex space-x-3 pt-2">
+                <button id="btn-cancel-save" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl font-semibold text-sm transition">Non</button>
+                <button id="btn-confirm-save" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl font-semibold text-sm transition">Oui, enregistrer</button>
+            </div>
         </div>
     </div>
 
     <!-- SCRIPTS LOGIQUE -->
     <script>
+        // ==========================================
+        // PARTIE BLOQUÉE & VALIDÉE (NE PAS MODIFIER)
+        // Son Yamaha, vélocité, gestion de la pédale de sustain (CC 64)
+        // et restitution audio validés le 11/11/2026.
+        // ==========================================
+
         const viewHome = document.getElementById('view-home');
         const viewRecorder = document.getElementById('view-recorder');
+        const viewLibrary = document.getElementById('view-library');
+        const modalSave = document.getElementById('modal-save');
         
         document.getElementById('nav-to-recorder').addEventListener('click', () => {
             viewHome.classList.add('hidden');
             viewRecorder.classList.remove('hidden');
         });
-        document.getElementById('nav-to-home').addEventListener('click', () => {
+        document.getElementById('nav-to-library').addEventListener('click', () => {
+            viewHome.classList.add('hidden');
+            viewLibrary.classList.remove('hidden');
+            renderLibrary();
+        });
+        document.getElementById('nav-to-home-from-rec').addEventListener('click', () => {
             viewRecorder.classList.add('hidden');
+            viewHome.classList.remove('hidden');
+        });
+        document.getElementById('nav-to-home-from-lib').addEventListener('click', () => {
+            viewLibrary.classList.add('hidden');
             viewHome.classList.remove('hidden');
         });
 
@@ -146,7 +192,7 @@
         let audioCtx = null;
         let instrument = null;
         const recStateText = document.getElementById('rec-state-text');
-        const btnStartRec = document.getElementById('btn-start-rec');
+        const btnToggleRec = document.getElementById('btn-toggle-rec');
 
         function initAudioAndInstrument() {
             if (!audioCtx) {
@@ -160,7 +206,7 @@
                 Soundfont.instrument(audioCtx, 'acoustic_grand_piano').then(function (player) {
                     instrument = player;
                     recStateText.textContent = "Prêt à enregistrer";
-                    btnStartRec.disabled = false;
+                    btnToggleRec.disabled = false;
                 }).catch(function (err) {
                     console.error("Erreur :", err);
                     recStateText.textContent = "Erreur de chargement du son";
@@ -176,96 +222,155 @@
         let recordingStartTime = 0;
         let recordedEvents = [];
         let timerInterval = null;
+        let savedTracks = JSON.parse(localStorage.getItem('helium_saved_tracks') || '[]');
 
-        const btnStopRec = document.getElementById('btn-stop-rec');
-        const btnPlayRec = document.getElementById('btn-play-rec');
         const recStatusDot = document.getElementById('rec-status-dot');
-        const recordedNotesCount = document.getElementById('recorded-notes-count');
         const timerDisplay = document.getElementById('timer-display');
+        const recBtnText = document.getElementById('rec-btn-text');
+        const recBtnDot = document.getElementById('rec-btn-dot');
 
-        btnStartRec.addEventListener('click', () => {
-            isRecording = true;
-            recordedEvents = [];
-            recordingStartTime = Date.now();
-            
-            btnStartRec.disabled = true;
-            btnStopRec.disabled = false;
-            btnPlayRec.disabled = true;
-            
-            recStatusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500 animate-ping";
-            recStateText.textContent = "Enregistrement en cours...";
-            
-            let seconds = 0;
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                seconds++;
-                let m = Math.floor(seconds / 60).toString().padStart(2, '0');
-                let s = (seconds % 60).toString().padStart(2, '0');
-                timerDisplay.textContent = `${m}:${s}`;
-            }, 1000);
-        });
+        // Bouton unique Enregistrer / Arrêter
+        btnToggleRec.addEventListener('click', () => {
+            if (!isRecording) {
+                // Démarrage
+                isRecording = true;
+                recordedEvents = [];
+                recordingStartTime = Date.now();
+                
+                btnToggleRec.className = "bg-slate-800 hover:bg-slate-700 text-white py-4 px-8 rounded-2xl shadow-md transition flex items-center space-x-3";
+                recBtnDot.className = "w-4 h-4 rounded-full bg-red-500 animate-ping";
+                recBtnText.textContent = "Arrêter l'enregistrement";
+                
+                recStatusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500 animate-ping";
+                recStateText.textContent = "Enregistrement en cours...";
+                
+                let seconds = 0;
+                clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    let m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                    let s = (seconds % 60).toString().padStart(2, '0');
+                    timerDisplay.textContent = `${m}:${s}`;
+                }, 1000);
+            } else {
+                // Arrêt -> Demande de sauvegarde
+                isRecording = false;
+                clearInterval(timerInterval);
+                
+                btnToggleRec.className = "bg-red-600 hover:bg-red-500 text-white py-4 px-8 rounded-2xl shadow-md transition flex items-center space-x-3";
+                recBtnDot.className = "w-4 h-4 rounded-full bg-white animate-pulse";
+                recBtnText.textContent = "Enregistrer";
+                
+                recStatusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+                recStateText.textContent = "Enregistrement arrêté";
 
-        btnStopRec.addEventListener('click', () => {
-            isRecording = false;
-            clearInterval(timerInterval);
-            
-            btnStartRec.disabled = false;
-            btnStopRec.disabled = true;
-            btnPlayRec.disabled = recordedEvents.length === 0;
-            
-            recStatusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-            recStateText.textContent = "Enregistrement terminé";
-        });
-
-        // Gestion de l'enregistrement des notes et de la pédale (CC 64)
-        function handleMidiMessage(type, data1, data2) {
-            if (isRecording) {
-                const timestamp = Date.now() - recordingStartTime;
-                recordedEvents.push({ timestamp, type, data1, data2 });
-                recordedNotesCount.textContent = recordedEvents.length;
+                if (recordedEvents.length > 0) {
+                    document.getElementById('input-track-name').value = "Morceau du " + new Date().toLocaleDateString();
+                    document.getElementById('input-track-desc').value = "";
+                    modalSave.classList.remove('hidden');
+                    modalSave.classList.add('flex');
+                } else {
+                    recStateText.textContent = "Aucune note enregistrée";
+                }
             }
+        });
+
+        // Gestion de la modale de sauvegarde
+        document.getElementById('btn-cancel-save').addEventListener('click', () => {
+            modalSave.classList.remove('flex');
+            modalSave.classList.add('hidden');
+            recordedEvents = [];
+            recStateText.textContent = "Prêt à enregistrer";
+        });
+
+        document.getElementById('btn-confirm-save').addEventListener('click', () => {
+            const title = document.getElementById('input-track-name').value || "Sans titre";
+            const desc = document.getElementById('input-track-desc').value || "";
+            const date = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            const newTrack = {
+                id: Date.now(),
+                title,
+                desc,
+                date,
+                events: [...recordedEvents]
+            };
+
+            savedTracks.push(newTrack);
+            localStorage.setItem('helium_saved_tracks', JSON.stringify(savedTracks));
+
+            modalSave.classList.remove('flex');
+            modalSave.classList.add('hidden');
+            recordedEvents = [];
+            
+            // Redirection vers la bibliothèque
+            viewRecorder.classList.add('hidden');
+            viewLibrary.classList.remove('hidden');
+            renderLibrary();
+        });
+
+        // Affichage de la bibliothèque
+        function renderLibrary() {
+            const libraryList = document.getElementById('library-list');
+            libraryList.innerHTML = '';
+
+            if (savedTracks.length === 0) {
+                libraryList.innerHTML = '<div class="text-center text-slate-500 text-sm py-20 italic">Aucun enregistrement pour le moment</div>';
+                return;
+            }
+
+            savedTracks.forEach(track => {
+                const card = document.createElement('div');
+                card.className = "bg-darkbg border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-md";
+                card.innerHTML = `
+                    <div class="space-y-1 flex-1 pr-3">
+                        <h4 class="font-bold text-sm text-white">${track.title}</h4>
+                        <p class="text-xs text-slate-400">${track.desc ? track.desc + ' • ' : ''}${track.date}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="playTrack(${track.id})" class="bg-orange-600 hover:bg-orange-500 text-white p-2.5 rounded-xl transition flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
+                        </button>
+                        <button onclick="deleteTrack(${track.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 p-2.5 rounded-xl transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H3a1 1 0 100 2h1v10a2 2 0 002 2h8a2 2 0 002-2V6h1a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm3 4a1 1 0 012 0v8a1 1 0 11-2 0V6zm-4 0a1 1 0 012 0v8a1 1 0 11-2 0V6zm8 0a1 1 0 012 0v8a1 1 0 11-2 0V6z"/></svg>
+                        </button>
+                    </div>
+                `;
+                libraryList.appendChild(card);
+            });
         }
 
-        // Lecture de la performance avec gestion du sustain de la pédale
-        btnPlayRec.addEventListener('click', () => {
-            if (recordedEvents.length === 0 || !instrument) return;
-            
-            recStateText.textContent = "Lecture avec sustain...";
-            btnPlayRec.disabled = true;
+        // Lecture d'un morceau de la bibliothèque
+        window.playTrack = function(id) {
+            const track = savedTracks.find(t => t.id === id);
+            if (!track || !instrument) return;
 
             let activeAudioNodes = {};
             let sustainActive = false;
             let sustainedNotesToStop = new Set();
 
-            recordedEvents.forEach(event => {
+            track.events.forEach(event => {
                 setTimeout(() => {
-                    // Type 9 = Note ON, Type 8 = Note OFF, Type 11 = Contrôleur (Pédale)
                     if (event.type === 9 && event.data2 > 0) {
-                        // Si une note jouait déjà, on la coupe proprement
                         if (activeAudioNodes[event.data1]) {
                             try { activeAudioNodes[event.data1].stop(); } catch(e) {}
                         }
-                        // On joue la note et on stocke l'objet audio
-                        activeAudioNodes[event.data1] = instrument.play(event.data1);
+                        activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: event.data2 / 127 });
                     } 
                     else if (event.type === 8 || (event.type === 9 && event.data2 === 0)) {
                         const note = event.data1;
                         if (activeAudioNodes[note]) {
                             if (sustainActive) {
-                                // Si la pédale est enfoncée, on retient la note pour la couper plus tard
                                 sustainedNotesToStop.add(note);
                             } else {
-                                // Sinon on coupe tout de suite
                                 try { activeAudioNodes[note].stop(); } catch(e) {}
                                 delete activeAudioNodes[note];
                             }
                         }
                     } 
                     else if (event.type === 11 && event.data1 === 64) {
-                        // Contrôleur de pédale de sustain (CC 64)
                         sustainActive = event.data2 >= 64;
                         if (!sustainActive) {
-                            // Quand on relève la pédale, on stoppe toutes les notes qui étaient en attente
                             sustainedNotesToStop.forEach(note => {
                                 if (activeAudioNodes[note]) {
                                     try { activeAudioNodes[note].stop(); } catch(e) {}
@@ -277,13 +382,21 @@
                     }
                 }, event.timestamp);
             });
+        };
 
-            const totalDuration = recordedEvents[recordedEvents.length - 1].timestamp + 2000;
-            setTimeout(() => {
-                recStateText.textContent = "Lecture terminée";
-                btnPlayRec.disabled = false;
-            }, totalDuration);
-        });
+        // Suppression d'un morceau
+        window.deleteTrack = function(id) {
+            savedTracks = savedTracks.filter(t => t.id !== id);
+            localStorage.setItem('helium_saved_tracks', JSON.stringify(savedTracks));
+            renderLibrary();
+        };
+
+        function handleMidiMessage(type, data1, data2) {
+            if (isRecording) {
+                const timestamp = Date.now() - recordingStartTime;
+                recordedEvents.push({ timestamp, type, data1, data2 });
+            }
+        }
 
         async function connectBluetoothPiano() {
             try {
@@ -304,7 +417,6 @@
                     const data2 = value.byteLength > 4 ? value.getUint8(4) : 0;
                     const command = status >> 4;
 
-                    // Command 9 = Note On, Command 8 = Note Off, Command 11 = Control Change (Pédale)
                     if (command === 9 || command === 8) {
                         handleMidiMessage(command, data1, data2);
                     } else if (command === 11) {
@@ -320,6 +432,9 @@
         }
 
         document.getElementById('btn-connect-home').addEventListener('click', connectBluetoothPiano);
+        // ==========================================
+        // FIN DE LA PARTIE BLOQUÉE
+        // ==========================================
     </script>
 </body>
 </html>
