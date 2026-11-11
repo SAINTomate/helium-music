@@ -24,7 +24,6 @@
 
     <!-- PAGE ACCUEIL -->
     <div id="view-home" class="flex-1 flex flex-col p-4 max-w-md w-full mx-auto justify-between space-y-4">
-        <!-- En-tête : Titre et Connexion -->
         <header class="flex items-center justify-between py-3">
             <h1 class="font-extrabold text-4xl tracking-tight text-white">Helium Music</h1>
             
@@ -34,10 +33,8 @@
             </button>
         </header>
 
-        <!-- Cartes du Dashboard -->
         <div class="flex-1 flex flex-col space-y-4 justify-center">
             
-            <!-- Section Morceau Actuel -->
             <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 shadow-lg flex flex-col space-y-4">
                 <div class="flex items-center justify-between">
                     <div>
@@ -54,7 +51,6 @@
                 </div>
             </div>
 
-            <!-- Carte Recorder / Enregistrement -->
             <button id="nav-to-recorder" class="bg-cardbg border border-slate-800 hover:border-orange-500/50 rounded-3xl p-6 shadow-lg flex items-center justify-between text-left transition group">
                 <div>
                     <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">Recorder</span>
@@ -65,7 +61,6 @@
                 </div>
             </button>
 
-            <!-- Carte Accompaniment -->
             <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 shadow-lg flex items-center justify-between opacity-75">
                 <div>
                     <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Accompaniment</span>
@@ -80,7 +75,6 @@
 
     <!-- PAGE RECORDER / ENREGISTREMENT -->
     <div id="view-recorder" class="flex-1 hidden flex-col p-4 max-w-md w-full mx-auto justify-between space-y-4">
-        <!-- En-tête -->
         <div class="flex items-center justify-between py-2">
             <button id="nav-to-home" class="text-slate-400 hover:text-white flex items-center space-x-1 text-sm font-medium">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -92,7 +86,6 @@
             </div>
         </div>
 
-        <!-- Zone centrale : Statut et informations -->
         <div class="flex-1 bg-cardbg border border-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center space-y-6 shadow-lg">
             <div id="rec-state-text" class="text-slate-400 text-sm font-medium">Prêt à enregistrer</div>
             
@@ -102,7 +95,6 @@
             </div>
         </div>
 
-        <!-- Contrôles d'enregistrement -->
         <div class="bg-cardbg border border-slate-800 rounded-3xl p-5 shadow-lg flex items-center justify-around">
             <button id="btn-start-rec" class="bg-red-600 hover:bg-red-500 text-white p-4 rounded-2xl shadow-md transition flex items-center space-x-2">
                 <div class="w-4 h-4 rounded-full bg-white animate-pulse"></div>
@@ -134,7 +126,6 @@
             viewHome.classList.remove('hidden');
         });
 
-        // Gestion bascule Play / Pause lecteur principal
         const btnPlayPause = document.getElementById('btn-play-pause');
         const iconPlay = document.getElementById('icon-play');
         const iconPause = document.getElementById('icon-pause');
@@ -151,7 +142,7 @@
             }
         });
 
-        // Audio de base (synthétiseur temporaire de secours)
+        // Synthétiseur de secours (utilisé uniquement lors de la relecture pour l'instant)
         let audioCtx = null;
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -181,7 +172,6 @@
             osc.stop(now + 1.5);
         }
 
-        // Logique d'enregistrement
         let isRecording = false;
         let recordingStartTime = 0;
         let recordedEvents = [];
@@ -231,7 +221,7 @@
 
         function handleMidiMessage(note, velocity, command) {
             if (isRecording) {
-                const timestamp = Date.now() - recordingStartTime;
+                const timestamp = Date.const ? 0 : Date.now() - recordingStartTime;
                 recordedEvents.push({ timestamp, note, velocity, command });
                 recordedNotesCount.textContent = recordedEvents.length;
             }
@@ -246,7 +236,7 @@
             recordedEvents.forEach(event => {
                 setTimeout(() => {
                     if (event.command === 9 && event.velocity > 0) {
-                        playCleanPianoTone(event.note);
+                        playCleanNotes(event.note);
                     }
                 }, event.timestamp);
             });
@@ -258,7 +248,10 @@
             }, totalDuration);
         });
 
-        // Connexion Bluetooth MIDI
+        function playCleanNotes(note) {
+            playCleanPianoTone(note);
+        }
+
         async function connectBluetoothPiano() {
             try {
                 const device = await navigator.bluetooth.requestDevice({
@@ -278,8 +271,8 @@
                     const velocity = value.byteLength > 4 ? value.getUint8(4) : 0;
                     const command = status >> 4;
 
+                    // On enregistre les notes jouées SANS émettre de son en direct
                     if (command === 9 && velocity > 0) {
-                        playCleanPianoTone(note);
                         handleMidiMessage(note, velocity, 9);
                     } else if (command === 8 || (command === 9 && velocity === 0)) {
                         handleMidiMessage(note, velocity, 8);
