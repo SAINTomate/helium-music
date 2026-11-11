@@ -66,7 +66,7 @@
             <!-- Carte Bibliothèque / Mes Morceaux -->
             <button id="nav-to-library" class="bg-cardbg border border-slate-800 hover:border-orange-500/50 rounded-3xl p-6 shadow-lg flex items-center justify-between text-left transition group">
                 <div>
-                    <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Bibliothèque</span>
+                    <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">Bibliothèque</span>
                     <h2 class="font-bold text-lg text-slate-100 mt-1">Mes Enregistrements</h2>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-orange-500 group-hover:scale-105 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -117,6 +117,39 @@
         </div>
     </div>
 
+    <!-- MODAL DE LECTURE AVEC BARRE DE TEMPS -->
+    <div id="modal-player" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-6 shadow-2xl">
+            <div>
+                <span class="text-xs text-orange-500 uppercase tracking-wider font-bold">Lecture en cours</span>
+                <h3 id="player-title" class="font-bold text-xl text-white mt-1">Nom du morceau</h3>
+            </div>
+
+            <!-- Barre de progression et temps -->
+            <div class="space-y-2">
+                <div class="w-full bg-darkbg rounded-full h-2 overflow-hidden border border-slate-800">
+                    <div id="player-progress" class="bg-orange-500 h-full w-0 transition-all duration-100"></div>
+                </div>
+                <div class="flex justify-between text-xs font-mono text-slate-400">
+                    <span id="player-current-time">00:00</span>
+                    <span id="player-total-time">00:00</span>
+                </div>
+            </div>
+
+            <!-- Contrôles du lecteur (Play/Pause dynamique) -->
+            <div class="flex justify-center pt-2">
+                <button id="btn-modal-play-pause" class="bg-orange-600 hover:bg-orange-500 text-white p-4 rounded-2xl shadow-md transition flex items-center justify-center">
+                    <!-- Icône Play -->
+                    <svg id="modal-icon-play" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
+                    <!-- Icône Pause (cachée par défaut) -->
+                    <svg id="modal-icon-pause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 fill-current hidden" viewBox="0 0 20 20"><path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/></svg>
+                </button>
+            </div>
+
+            <button id="btn-close-player" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl font-semibold text-sm transition">Fermer</button>
+        </div>
+    </div>
+
     <!-- MODAL DE SAUVEGARDE -->
     <div id="modal-save" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-cardbg border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
@@ -153,6 +186,7 @@
         const viewRecorder = document.getElementById('view-recorder');
         const viewLibrary = document.getElementById('view-library');
         const modalSave = document.getElementById('modal-save');
+        const modalPlayer = document.getElementById('modal-player');
         
         document.getElementById('nav-to-recorder').addEventListener('click', () => {
             viewHome.classList.add('hidden');
@@ -228,12 +262,11 @@
         const recBtnText = document.getElementById('rec-btn-text');
         const recBtnDot = document.getElementById('rec-btn-dot');
 
-        // Bouton unique Enregistrer / Arrêter (Démarrage immédiat au clic)
         btnToggleRec.addEventListener('click', () => {
             if (!isRecording) {
                 isRecording = true;
                 recordedEvents = [];
-                recordingStartTime = Date.now(); // Top départ exact au clic sur le bouton
+                recordingStartTime = Date.now();
                 
                 btnToggleRec.className = "bg-slate-800 hover:bg-slate-700 text-white py-4 px-8 rounded-2xl shadow-md transition flex items-center space-x-3";
                 recBtnDot.className = "w-4 h-4 rounded-full bg-red-500 animate-ping";
@@ -323,7 +356,7 @@
                         <p class="text-xs text-slate-400">${track.desc ? track.desc + ' • ' : ''}${track.date}</p>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button onclick="playTrack(${track.id})" class="bg-orange-600 hover:bg-orange-500 text-white p-2.5 rounded-xl transition flex items-center justify-center">
+                        <button onclick="openPlayer(${track.id})" class="bg-orange-600 hover:bg-orange-500 text-white p-2.5 rounded-xl transition flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
                         </button>
                         <button onclick="deleteTrack(${track.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 p-2.5 rounded-xl transition">
@@ -335,25 +368,59 @@
             });
         }
 
-        window.playTrack = function(id) {
+        // Logique de lecture fluide avec l'horloge AudioContext et gestion de la barre de temps
+        let activeTimeouts = [];
+        let activeAudioNodes = {};
+        let isPlayerRunning = false;
+
+        window.openPlayer = function(id) {
             const track = savedTracks.find(t => t.id === id);
             if (!track || !instrument) return;
 
-            let activeAudioNodes = {};
+            document.getElementById('player-title').textContent = track.title;
+            modalPlayer.classList.remove('hidden');
+            modalPlayer.classList.add('flex');
+
+            const maxTime = track.events.length > 0 ? track.events[track.events.length - 1].timestamp : 0;
+            const totalSec = Math.ceil(maxTime / 1000);
+            document.getElementById('player-total-time').textContent = formatTime(totalSec);
+            document.getElementById('player-current-time').textContent = "00:00";
+            document.getElementById('player-progress').style.width = '0%';
+
+            startTrackPlayback(track);
+        };
+
+        function startTrackPlayback(track) {
+            // Nettoyage si lecture précédente en cours
+            activeTimeouts.forEach(t => clearTimeout(t));
+            activeTimeouts = [];
+            Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
+            activeAudioNodes = {};
+
+            isPlayerRunning = true;
+            const modalIconPlay = document.getElementById('modal-icon-play');
+            const modalIconPause = document.getElementById('modal-icon-pause');
+            modalIconPlay.classList.add('hidden');
+            modalIconPause.classList.remove('hidden');
+
+            const maxTime = track.events.length > 0 ? track.events[track.events.length - 1].timestamp : 0;
+            const startTime = audioCtx.currentTime;
             let sustainActive = false;
             let sustainedNotesToStop = new Set();
 
+            // Planification ultra-précise
             track.events.forEach(event => {
-                setTimeout(() => {
+                const delay = event.timestamp / 1000; // en secondes
+                const timeoutId = setTimeout(() => {
+                    if (!isPlayerRunning) return;
+
                     if (event.type === 9 && event.data2 > 0) {
                         if (activeAudioNodes[event.data1]) {
                             try { activeAudioNodes[event.data1].stop(); } catch(e) {}
                         }
                         try {
                             activeAudioNodes[event.data1] = instrument.play(event.data1, audioCtx.currentTime, { gain: event.data2 / 127 });
-                        } catch(err) {
-                            console.error("Erreur lecture note:", err);
-                        }
+                        } catch(err) {}
                     } 
                     else if (event.type === 8 || (event.type === 9 && event.data2 === 0)) {
                         const note = event.data1;
@@ -379,8 +446,61 @@
                         }
                     }
                 }, event.timestamp);
+                activeTimeouts.push(timeoutId);
             });
-        };
+
+            // Mise à jour de la barre de progression visuelle
+            const progressInterval = setInterval(() => {
+                if (!isPlayerRunning) {
+                    clearInterval(progressInterval);
+                    return;
+                }
+                const elapsed = (audioCtx.currentTime - startTime) * 1000;
+                const percent = Math.min(100, (elapsed / maxTime) * 100) || 0;
+                document.getElementById('player-progress').style.width = percent + '%';
+                
+                const currentSec = Math.floor(elapsed / 1000);
+                document.getElementById('player-current-time').textContent = formatTime(currentSec);
+
+                if (elapsed >= maxTime + 1500) {
+                    clearInterval(progressInterval);
+                    isPlayerRunning = false;
+                    modalIconPause.classList.add('hidden');
+                    modalIconPlay.classList.remove('hidden');
+                }
+            }, 100);
+            activeTimeouts.push(progressInterval);
+        }
+
+        function formatTime(seconds) {
+            let m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            let s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // Bouton Pause/Play dans la modale
+        document.getElementById('btn-modal-play-pause').addEventListener('click', () => {
+            isPlayerRunning = !isPlayerRunning;
+            const modalIconPlay = document.getElementById('modal-icon-play');
+            const modalIconPause = document.getElementById('modal-icon-pause');
+            if (isPlayerRunning) {
+                modalIconPlay.classList.add('hidden');
+                modalIconPause.classList.remove('hidden');
+            } else {
+                modalIconPause.classList.add('hidden');
+                modalIconPlay.classList.remove('hidden');
+                activeTimeouts.forEach(t => clearTimeout(t));
+                Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
+            }
+        });
+
+        document.getElementById('btn-close-player').addEventListener('click', () => {
+            isPlayerRunning = false;
+            activeTimeouts.forEach(t => clearTimeout(t));
+            Object.values(activeAudioNodes).forEach(node => { try { node.stop(); } catch(e) {} });
+            modalPlayer.classList.remove('flex');
+            modalPlayer.classList.add('hidden');
+        });
 
         window.deleteTrack = function(id) {
             savedTracks = savedTracks.filter(t => t.id !== id);
